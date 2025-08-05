@@ -1,11 +1,10 @@
-# SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
-#
-# SPDX-License-Identifier: MIT
-"""
+package go_adafruit_bno055
 
-Subclass of `adafruit_bno08x.BNO08X` to use I2C
+/*
+SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
 
-"""
+SPDX-License-Identifier: MIT
+*/
 
 from struct import pack_into
 
@@ -13,10 +12,10 @@ from adafruit_bus_device import i2c_device
 
 from . import BNO08X, DATA_BUFFER_SIZE, Packet, PacketError, const
 
-_BNO08X_DEFAULT_ADDRESS = const(0x4A)
+const Bno08xDefaultAddress uint8 = 0x4A
 
-
-class BNO08X_I2C(BNO08X):
+type (
+	BNO08X_I2C(BNO08X) struct:
     """Library for the BNO08x IMUs from Hillcrest Laboratories
 
     :param ~busio.I2C i2c_bus: The I2C bus the BNO08x is connected to.
