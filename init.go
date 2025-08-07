@@ -6,23 +6,6 @@ SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
 SPDX-License-Identifier: MIT
  */
 
-
-
-
-func _parse_command_response(report_bytes: bytearray) -> tuple[Any, Any]:
-    // CMD response report:
-    // 0 Report ID = 0xF1
-    // 1 Sequence number
-    // 2 Command
-    // 3 Command sequence number
-    // 4 Response sequence number
-    // 5 R0-10 A set of response values. The interpretation of these values is specific
-    // to the response for each command.
-    report_body = unpack_from("<BBBBB", report_bytes)
-    response_values = unpack_from("<BBBBBBBBBBB", report_bytes, offset=5)
-    return (report_body, response_values)
-
-
 func _insert_command_request_report(
     command: int,
     buffer: bytearray,

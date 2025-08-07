@@ -13,25 +13,25 @@ const (
 	BnoChannelWakeInputSensorReports int = 4
 	BnoChannelGyroRotationVector     int = 5
 
-	GetFeatureRequest uint8 = 0xFE
-	SetFeatureCommand uint8 = 0xFD
-	GetFeatureCommand uint8 = 0xFC
-	BaseTimestamp     uint8 = 0xFB
+	GetFeatureRequestID uint8 = 0xFE
+	SetFeatureCommandID uint8 = 0xFD
+	GetFeatureCommandID uint8 = 0xFC
+	BaseTimestamp       uint8 = 0xFB
 
 	TimestampRebase uint8 = 0xFA
 
-	SHTPReportProductIdResponse uint8 = 0xF8
-	SHTPReportProductIdRequest  uint8 = 0xF9
+	SHTPReportProductIDResponseID uint8 = 0xF8
+	SHTPReportProductIDRequestID  uint8 = 0xF9
 
-	FRSWriteRequest  uint8 = 0xF7
-	FRSWriteData     uint8 = 0xF6
-	FRSWriteResponse uint8 = 0xF5
+	FRSWriteRequestID  uint8 = 0xF7
+	FRSWriteDataID     uint8 = 0xF6
+	FRSWriteResponseID uint8 = 0xF5
 
-	FRSReadRequest  uint8 = 0xF4
-	FRSReadResponse uint8 = 0xF3
+	FRSReadRequestID  uint8 = 0xF4
+	FRSReadResponseID uint8 = 0xF3
 
-	CommandRequest  uint8 = 0xF2
-	CommandResponse uint8 = 0xF1
+	CommandRequestID  uint8 = 0xF2
+	CommandResponseID uint8 = 0xF1
 
 	// DCD/ ME Calibration commands and sub-commands
 	SaveDCD             uint8 = 0x6
@@ -84,12 +84,12 @@ const (
 )
 
 var (
-	QPoint14Scalar float64 = math.Pow(2, 14*-1)
-	QPoint12Scalar float64 = math.Pow(2, 12*-1)
-	// QPoint10Scalar float64 = math.Pow(2, 10 * -1)
-	QPoint9Scalar float64 = math.Pow(2, 9*-1)
-	QPoint8Scalar float64 = math.Pow(2, 8*-1)
-	QPoint4Scalar float64 = math.Pow(2, 4*-1)
+	QPoint14Scalar = math.Pow(2, 14*-1)
+	QPoint12Scalar = math.Pow(2, 12*-1)
+	// QPoint10Scalar = math.Pow(2, 10 * -1)
+	QPoint9Scalar = math.Pow(2, 9*-1)
+	QPoint8Scalar = math.Pow(2, 8*-1)
+	QPoint4Scalar = math.Pow(2, 4*-1)
 
 	GyroscopeScalar             = QPoint9Scalar
 	AccelerometerScalar         = QPoint8Scalar
@@ -98,11 +98,11 @@ var (
 	MagneticScalar              = QPoint4Scalar
 
 	ReportLengths = map[uint8]int{
-		SHTPReportProductIdResponse: 16,
-		GetFeatureCommand:           17,
-		CommandResponse:             16,
-		BaseTimestamp:               5,
-		TimestampRebase:             5,
+		SHTPReportProductIDResponseID: 16,
+		GetFeatureCommandID:           17,
+		CommandResponseID:             16,
+		BaseTimestamp:                 5,
+		TimestampRebase:               5,
 	}
 
 	// RawReports are the raw Reports require their counterpart to be enabled
@@ -153,12 +153,35 @@ var (
 	EnabledActivities uint = 0x1FF // All activities; 1 bit set for each of 8 activities, + Unknown
 
 	// DataBufferSize obviously eats ram
-	DataBufferSize int = 512
+	DataBufferSize = 512
 
+	// ReportAccuracyStatus is a list of accuracy status strings
 	ReportAccuracyStatus = []string{
 		"Accuracy Unreliable",
 		"Low Accuracy",
 		"Medium Accuracy",
 		"High Accuracy",
+	}
+
+	// Activities is a list of activity strings
+	Activities = []string{
+		"Unknown",
+		"In-Vehicle",
+		"On-Bicycle",
+		"On-Foot",
+		"Still",
+		"Tilting",
+		"Walking",
+		"Running",
+		"OnStairs",
+	}
+
+	// StabilityClassifications is a list of stability classification strings
+	StabilityClassifications = []string{
+		"Unknown",
+		"On Table",
+		"Stationary",
+		"Stable",
+		"In motion",
 	}
 )
