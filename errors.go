@@ -10,4 +10,6 @@ var (
 	ErrInvalidReportIDForSensorID           = errors.New("invalid report ID for sensor ID parsing")
 	ErrInvalidReportIDForActivityClassifier = errors.New("invalid report ID for activity classifier parsing")
 	ErrInvalidReportIDForCommandResponse    = errors.New("invalid report ID for command response parsing")
+	ErrUnknownReportID                      = errors.New("unknown report ID received from sensor")
+	ErrNilSensorReport                      = errors.New("nil sensor report provided for parsing")
 )

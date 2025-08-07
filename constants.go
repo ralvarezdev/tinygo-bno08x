@@ -84,18 +84,11 @@ const (
 )
 
 var (
-	QPoint14Scalar = math.Pow(2, 14*-1)
-	QPoint12Scalar = math.Pow(2, 12*-1)
-	// QPoint10Scalar = math.Pow(2, 10 * -1)
-	QPoint9Scalar = math.Pow(2, 9*-1)
-	QPoint8Scalar = math.Pow(2, 8*-1)
-	QPoint4Scalar = math.Pow(2, 4*-1)
-
-	GyroscopeScalar             = QPoint9Scalar
-	AccelerometerScalar         = QPoint8Scalar
-	QuaternionScalar            = QPoint14Scalar
-	GeomagneticQuaternionScalar = QPoint12Scalar
-	MagneticScalar              = QPoint4Scalar
+	QuaternionScalar            = int(math.Pow(2, 14*-1))
+	GeomagneticQuaternionScalar = int(math.Pow(2, 12*-1))
+	GyroscopeScalar             = int(math.Pow(2, 9*-1))
+	AccelerometerScalar         = int(math.Pow(2, 8*-1))
+	MagneticScalar              = int(math.Pow(2, 4*-1))
 
 	ReportLengths = map[uint8]int{
 		SHTPReportProductIDResponseID: 16,
@@ -112,22 +105,54 @@ var (
 		BnoReportRawMagnetometer:  BnoReportMagnetometer,
 	}
 
-	AvailableSensorReports = map[uint8][]float64{
-		BnoReportAccelerometer:             {QPoint8Scalar, 3, 10},
-		BnoReportGravity:                   {QPoint8Scalar, 3, 10},
-		BnoReportGyroscope:                 {QPoint9Scalar, 3, 10},
-		BnoReportMagnetometer:              {QPoint4Scalar, 3, 10},
-		BnoReportLinearAcceleration:        {QPoint8Scalar, 3, 10},
-		BnoReportRotationVector:            {QPoint14Scalar, 4, 14},
-		BnoReportGeomagneticRotationVector: {QPoint12Scalar, 4, 14},
-		BnoReportGameRotationVector:        {QPoint14Scalar, 4, 12},
-		BnoReportStepCounter:               {1, 1, 12},
-		BnoReportShakeDetector:             {1, 1, 6},
-		BnoReportStabilityClassifier:       {1, 1, 6},
-		BnoReportActivityClassifier:        {1, 1, 16},
-		BnoReportRawAccelerometer:          {1, 3, 16},
-		BnoReportRawGyroscope:              {1, 3, 16},
-		BnoReportRawMagnetometer:           {1, 3, 16},
+	AvailableSensorReports = map[uint8]*SensorReport{
+		BnoReportAccelerometer: NewSensorReport(
+			AccelerometerScalar,
+			3,
+			10,
+		),
+		BnoReportGravity: NewSensorReport(
+			AccelerometerScalar,
+			3,
+			10,
+		),
+		BnoReportGyroscope: NewSensorReport(
+			GyroscopeScalar,
+			3,
+			10,
+		),
+		BnoReportMagnetometer: NewSensorReport(
+			MagneticScalar,
+			3,
+			10,
+		),
+		BnoReportLinearAcceleration: NewSensorReport(
+			AccelerometerScalar,
+			3,
+			10,
+		),
+		BnoReportRotationVector: NewSensorReport(
+			QuaternionScalar,
+			4,
+			14,
+		),
+		BnoReportGeomagneticRotationVector: NewSensorReport(
+			GeomagneticQuaternionScalar,
+			4,
+			14,
+		),
+		BnoReportGameRotationVector: NewSensorReport(
+			QuaternionScalar,
+			4,
+			12,
+		),
+		BnoReportStepCounter:         NewSensorReport(1, 1, 12),
+		BnoReportShakeDetector:       NewSensorReport(1, 1, 6),
+		BnoReportStabilityClassifier: NewSensorReport(1, 1, 6),
+		BnoReportActivityClassifier:  NewSensorReport(1, 1, 16),
+		BnoReportRawAccelerometer:    NewSensorReport(1, 3, 16),
+		BnoReportRawGyroscope:        NewSensorReport(1, 3, 16),
+		BnoReportRawMagnetometer:     NewSensorReport(1, 3, 16),
 	}
 
 	InitialReports = map[uint8]any{

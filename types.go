@@ -1,14 +1,29 @@
 package go_adafruit_bno055
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+)
 
 type (
+	// SensorReport represents a report from the BNO08x sensor
+	SensorReport struct {
+		Scalar       int
+		Count        int
+		ReportLength int
+	}
+
 	// PacketHeader represents the header of a BNO08x packet
 	PacketHeader struct {
 		ChannelNumber   uint8
 		SequenceNumber  uint8
 		DataLength      int
 		PacketByteCount int
+	}
+
+	// SensorReportData represents a parsed sensor report with 16-bit fields
+	SensorReportData struct {
+		Results  []int
+		Accuracy int
 	}
 
 	// GetFeatureResponseReport represents the response report for a Get Feature request
@@ -66,6 +81,25 @@ type (
 		Classifications          map[string]int
 	}
 )
+
+// NewSensorReport creates a new SensorReport from the provided report bytes.
+//
+// Parameters:
+//
+//	scalar: The scalar value for the report
+//	count: The count of the report
+//	reportLength: The length of the report in bytes
+//
+// Returns:
+//
+//	A pointer to the newly created SensorReport
+func NewSensorReport(scalar, count, reportLength int) *SensorReport {
+	return &SensorReport{
+		Scalar:       scalar,
+		Count:        count,
+		ReportLength: reportLength,
+	}
+}
 
 // NewGetFeatureResponseReport creates a new GetFeatureResponseReport from the provided report bytes.
 //
@@ -279,5 +313,62 @@ func NewActivityClassifierReport(reportBytes []byte) (
 		MostLikelyClassification: mostLikelyClassification,
 		Classifications:          classifications,
 	}
+	return report, nil
+}
+
+// NewSensorReportData parses sensor reports with only 16-bit fields.
+func NewSensorReportData(reportBytes []byte) (*SensorReportData, error) {
+	dataOffset := 4 // may not always be true
+
+	// Validate the length of the report bytes
+	if len(reportBytes) < dataOffset {
+		return nil, ErrReportBytesTooShort
+	}
+
+	// Check if the report ID is valid
+	reportID := reportBytes[0]
+	sensorReport, ok := AvailableSensorReports[reportID]
+	if sensorReport == nil {
+		return nil, ErrNilSensorReport
+	}
+	if !ok {
+		return nil, ErrUnknownReportID
+	}
+	scalar := sensorReport.Scalar
+	count := sensorReport.Count
+
+	// Check if it's signed or unsigned data
+	formatUnsigned := false
+	if _, ok := RawReports[reportID]; ok {
+		formatUnsigned = true
+	}
+
+	// Get the accuracy and results from the report bytes
+	accuracy := int(reportBytes[2] & 0b11)
+	results := make([]int, 0, count)
+
+	for offsetIdx := 0; offsetIdx < count; offsetIdx++ {
+		// Calculate the total offset for the current data point
+		totalOffset := dataOffset + (offsetIdx * 2)
+		if totalOffset+2 > len(reportBytes) {
+			return nil, ErrReportBytesTooShort
+		}
+
+		// Read the raw data from the report bytes
+		var rawData int
+		if formatUnsigned {
+			rawData = int(binary.LittleEndian.Uint16(reportBytes[totalOffset : totalOffset+2]))
+		} else {
+			rawData = int(int16(binary.LittleEndian.Uint16(reportBytes[totalOffset : totalOffset+2])))
+		}
+		scaledData := rawData * scalar
+		results = append(results, scaledData)
+	}
+
+	report := &SensorReportData{
+		Results:  results,
+		Accuracy: accuracy,
+	}
+
 	return report, nil
 }
