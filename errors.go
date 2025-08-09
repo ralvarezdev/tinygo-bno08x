@@ -16,4 +16,8 @@ var (
 	ErrNilSensorReport                      = errors.New("nil sensor report provided for parsing")
 	ErrNotImplemented                       = errors.New("function not implemented yet")
 	ErrCommandRequestTooManyArguments       = errors.New("command request cannot have more than 9 arguments")
+	ErrFailedToReadSensorID                 = errors.New("failed to read sensor ID from the device")
+	ErrNilPacketReader                      = errors.New("nil packet header provided for parsing")
+	ErrNilPacketWriter                      = errors.New("nil packet writer provided for writing data")
+	ErrPacketTimeout                        = errors.New("packet read timeout exceeded")
 )

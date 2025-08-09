@@ -6,22 +6,22 @@ import (
 )
 
 type (
-	// PacketHeader represents the header of a BNO08x packet
-	PacketHeader struct {
+	// packetHeader represents the header of a BNO08x packet
+	packetHeader struct {
 		ChannelNumber   uint8
 		SequenceNumber  uint8
 		DataLength      int
 		PacketByteCount int
 	}
 
-	// Packet represents a BNO08x packet
-	Packet struct {
-		Header *PacketHeader
+	// packet represents a BNO08x packet
+	packet struct {
+		Header *packetHeader
 		Data   []byte
 	}
 )
 
-// NewPacketHeader creates a PacketHeader from a given buffer.
+// newPacketHeader creates a packetHeader from a given buffer.
 //
 // Parameters:
 //
@@ -29,8 +29,8 @@ type (
 //
 // Returns:
 //
-//	A PacketHeader object or an error if the buffer is too short.
-func NewPacketHeader(packetBytes []byte) (*PacketHeader, error) {
+//	A packetHeader object or an error if the buffer is too short.
+func newPacketHeader(packetBytes []byte) (*packetHeader, error) {
 	// Ensure the buffer is at least 4 bytes long to read the header
 	if len(packetBytes) < 4 {
 		return nil, ErrBufferTooShortForHeader
@@ -44,7 +44,7 @@ func NewPacketHeader(packetBytes []byte) (*PacketHeader, error) {
 	if dataLength < 0 {
 		dataLength = 0
 	}
-	return &PacketHeader{
+	return &packetHeader{
 		ChannelNumber:   channelNumber,
 		SequenceNumber:  sequenceNumber,
 		DataLength:      dataLength,
@@ -52,16 +52,16 @@ func NewPacketHeader(packetBytes []byte) (*PacketHeader, error) {
 	}, nil
 }
 
-// IsError checks if the provided PacketHeader indicates an error condition.
+// IsError checks if the provided packetHeader indicates an error condition.
 //
 // Parameters:
 //
-//	header: The PacketHeader to check.
+//	header: The packetHeader to check.
 //
 // Returns:
 //
 //	True if the header indicates an error, otherwise false.
-func (header *PacketHeader) IsError() bool {
+func (header *packetHeader) IsError() bool {
 	// Check if the channel number is greater than 5
 	if header.ChannelNumber > 5 {
 		return true
@@ -73,7 +73,7 @@ func (header *PacketHeader) IsError() bool {
 	return false
 }
 
-// NewPacket creates a new Packet from the provided packet bytes.
+// newPacket creates a new packet from the provided packet bytes.
 //
 // Parameters:
 //
@@ -81,15 +81,15 @@ func (header *PacketHeader) IsError() bool {
 //
 // Returns:
 //
-//	A Packet object or an error if the packet header could not be created.
-func NewPacket(packetBytes []byte) (*Packet, error) {
-	// Create a new PacketHeader from the packet bytes
-	header, err := NewPacketHeader(packetBytes)
+//	A packet object or an error if the packet header could not be created.
+func newPacket(packetBytes []byte) (*packet, error) {
+	// Create a new packetHeader from the packet bytes
+	header, err := newPacketHeader(packetBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Packet{
+	return &packet{
 		Header: header,
 		Data:   packetBytes[BnoHeaderLen : BnoHeaderLen+header.DataLength],
 	}, nil
@@ -100,7 +100,7 @@ func NewPacket(packetBytes []byte) (*Packet, error) {
 // Returns:
 //
 //	The report ID as an uint8 or an error if the data is too short.
-func (p *Packet) ReportID() (uint8, error) {
+func (p *packet) ReportID() (uint8, error) {
 	if len(p.Data) < 1 {
 		return 0, ErrPacketDataTooShort
 	}
@@ -112,7 +112,7 @@ func (p *Packet) ReportID() (uint8, error) {
 // Returns:
 //
 //	The channel number as an uint8.
-func (p *Packet) ChannelNumber() uint8 {
+func (p *packet) ChannelNumber() uint8 {
 	return p.Header.ChannelNumber
 }
 
@@ -121,7 +121,7 @@ func (p *Packet) ChannelNumber() uint8 {
 // Returns:
 //
 //	True if the packet is an error, otherwise false.
-func (p *Packet) IsError() bool {
+func (p *packet) IsError() bool {
 	return p.Header.IsError()
 }
 
@@ -130,8 +130,8 @@ func (p *Packet) IsError() bool {
 // Returns:
 //
 //	A string containing the packet details.
-func (p *Packet) String() *string {
-	outputStr := "\n\t\t********** Packet *************\n"
+func (p *packet) String() *string {
+	outputStr := "\n\t\t********** packet *************\n"
 	outputStr += "DBG::\t\t HEADER:\n"
 
 	outputStr += fmt.Sprintf("DBG::\t\t Data Length: %d\n", p.Header.DataLength)

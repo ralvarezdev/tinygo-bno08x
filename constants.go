@@ -81,6 +81,15 @@ const (
 	Bno08xCmdReset        uint8   = 0x01
 	QuaternionQPoint      int     = 14
 	BnoHeaderLen          int     = 4
+
+	// All activities; 1 bit set for each of 8 activities, + Unknown
+	EnabledActivities uint = 0x1FF
+
+	// DataBufferSize is the size of the data buffer used for reading and writing
+	DataBufferSize = 512
+
+	// CommandBufferSize is the size of the command buffer
+	CommandBufferSize = 12
 )
 
 var (
@@ -105,54 +114,54 @@ var (
 		BnoReportRawMagnetometer:  BnoReportMagnetometer,
 	}
 
-	AvailableSensorReports = map[uint8]*SensorReport{
-		BnoReportAccelerometer: NewSensorReport(
+	AvailableSensorReports = map[uint8]*sensorReport{
+		BnoReportAccelerometer: newSensorReport(
 			AccelerometerScalar,
 			3,
 			10,
 		),
-		BnoReportGravity: NewSensorReport(
+		BnoReportGravity: newSensorReport(
 			AccelerometerScalar,
 			3,
 			10,
 		),
-		BnoReportGyroscope: NewSensorReport(
+		BnoReportGyroscope: newSensorReport(
 			GyroscopeScalar,
 			3,
 			10,
 		),
-		BnoReportMagnetometer: NewSensorReport(
+		BnoReportMagnetometer: newSensorReport(
 			MagneticScalar,
 			3,
 			10,
 		),
-		BnoReportLinearAcceleration: NewSensorReport(
+		BnoReportLinearAcceleration: newSensorReport(
 			AccelerometerScalar,
 			3,
 			10,
 		),
-		BnoReportRotationVector: NewSensorReport(
+		BnoReportRotationVector: newSensorReport(
 			QuaternionScalar,
 			4,
 			14,
 		),
-		BnoReportGeomagneticRotationVector: NewSensorReport(
+		BnoReportGeomagneticRotationVector: newSensorReport(
 			GeomagneticQuaternionScalar,
 			4,
 			14,
 		),
-		BnoReportGameRotationVector: NewSensorReport(
+		BnoReportGameRotationVector: newSensorReport(
 			QuaternionScalar,
 			4,
 			12,
 		),
-		BnoReportStepCounter:         NewSensorReport(1, 1, 12),
-		BnoReportShakeDetector:       NewSensorReport(1, 1, 6),
-		BnoReportStabilityClassifier: NewSensorReport(1, 1, 6),
-		BnoReportActivityClassifier:  NewSensorReport(1, 1, 16),
-		BnoReportRawAccelerometer:    NewSensorReport(1, 3, 16),
-		BnoReportRawGyroscope:        NewSensorReport(1, 3, 16),
-		BnoReportRawMagnetometer:     NewSensorReport(1, 3, 16),
+		BnoReportStepCounter:         newSensorReport(1, 1, 12),
+		BnoReportShakeDetector:       newSensorReport(1, 1, 6),
+		BnoReportStabilityClassifier: newSensorReport(1, 1, 6),
+		BnoReportActivityClassifier:  newSensorReport(1, 1, 16),
+		BnoReportRawAccelerometer:    newSensorReport(1, 3, 16),
+		BnoReportRawGyroscope:        newSensorReport(1, 3, 16),
+		BnoReportRawMagnetometer:     newSensorReport(1, 3, 16),
 	}
 
 	InitialReports = map[uint8]any{
@@ -174,11 +183,6 @@ var (
 		BnoReportGameRotationVector:        []int{0.0, 0.0, 0.0, 0.0},
 		BnoReportGeomagneticRotationVector: []int{0.0, 0.0, 0.0, 0.0},
 	}
-
-	EnabledActivities uint = 0x1FF // All activities; 1 bit set for each of 8 activities, + Unknown
-
-	// DataBufferSize obviously eats ram
-	DataBufferSize = 512
 
 	// ReportAccuracyStatus is a list of accuracy status strings
 	ReportAccuracyStatus = []string{

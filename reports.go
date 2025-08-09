@@ -5,21 +5,21 @@ import (
 )
 
 type (
-	// SensorReport represents a report from the BNO08x sensor
-	SensorReport struct {
+	// sensorReport represents a report from the BNO08x sensor
+	sensorReport struct {
 		Scalar       int
 		Count        int
 		ReportLength int
 	}
 
-	// SensorReportData represents a parsed sensor report with 16-bit fields
-	SensorReportData struct {
+	// sensorReportData represents a parsed sensor report with 16-bit fields
+	sensorReportData struct {
 		Results  []int
 		Accuracy int
 	}
 
-	// GetFeatureResponseReport represents the response report for a Get Feature request
-	GetFeatureResponseReport struct {
+	// getFeatureResponseReport represents the response report for a Get Feature request
+	getFeatureResponseReport struct {
 		ReportID                 byte
 		FeatureReportID          byte
 		FeatureFlags             byte
@@ -29,23 +29,23 @@ type (
 		SensorSpecificConfigWord uint32
 	}
 
-	// ShakeReport represents a shake report from the BNO08x device
-	ShakeReport struct {
+	// shakeReport represents a shake report from the BNO08x device
+	shakeReport struct {
 		AreShakesDetected bool
 	}
 
-	// StepCounterReport represents a step counter report from the BNO08x device
-	StepCounterReport struct {
+	// stepCounterReport represents a step counter report from the BNO08x device
+	stepCounterReport struct {
 		Count uint16
 	}
 
-	// StabilityClassifierReport represents a stability classifier report from the BNO08x device
-	StabilityClassifierReport struct {
+	// stabilityClassifierReport represents a stability classifier report from the BNO08x device
+	stabilityClassifierReport struct {
 		StabilityClassifier string
 	}
 
-	// SensorID represents the identification of a sensor
-	SensorID struct {
+	// sensorID represents the identification of a sensor
+	sensorID struct {
 		SoftwareMajorVersion uint32
 		SoftwareMinorVersion uint32
 		SoftwarePatchVersion uint32
@@ -53,8 +53,8 @@ type (
 		SoftwareBuildNumber  uint32
 	}
 
-	// CommandResponse represents a command response from the BNO08x device
-	CommandResponse struct {
+	// commandResponse represents a command response from the BNO08x device
+	commandResponse struct {
 		SequenceNumber         byte
 		Command                byte
 		CommandSequenceNumber  byte
@@ -62,8 +62,8 @@ type (
 		ResponseValues         []byte
 	}
 
-	// ActivityClassifierReport represents an activity classifier report from the BNO08x device
-	ActivityClassifierReport struct {
+	// activityClassifierReport represents an activity classifier report from the BNO08x device
+	activityClassifierReport struct {
 		SequenceNumber           byte
 		Status                   byte
 		Delay                    byte
@@ -74,7 +74,7 @@ type (
 	}
 )
 
-// NewSensorReport creates a new SensorReport from the provided report bytes.
+// newSensorReport creates a new sensorReport from the provided report bytes.
 //
 // Parameters:
 //
@@ -84,16 +84,16 @@ type (
 //
 // Returns:
 //
-//	A pointer to the newly created SensorReport
-func NewSensorReport(scalar, count, reportLength int) *SensorReport {
-	return &SensorReport{
+//	A pointer to the newly created sensorReport
+func newSensorReport(scalar, count, reportLength int) *sensorReport {
+	return &sensorReport{
 		Scalar:       scalar,
 		Count:        count,
 		ReportLength: reportLength,
 	}
 }
 
-// NewGetFeatureResponseReport creates a new GetFeatureResponseReport from the provided report bytes.
+// newGetFeatureResponseReport creates a new getFeatureResponseReport from the provided report bytes.
 //
 // Parameters:
 //
@@ -101,9 +101,9 @@ func NewSensorReport(scalar, count, reportLength int) *SensorReport {
 //
 // Returns:
 //
-//	A pointer to the newly created GetFeatureResponseReport
-func NewGetFeatureResponseReport(reportBytes []byte) (
-	*GetFeatureResponseReport,
+//	A pointer to the newly created getFeatureResponseReport
+func newGetFeatureResponseReport(reportBytes []byte) (
+	*getFeatureResponseReport,
 	error,
 ) {
 	// Validate the length of the report bytes
@@ -111,7 +111,7 @@ func NewGetFeatureResponseReport(reportBytes []byte) (
 		return nil, ErrReportBytesTooShort
 	}
 
-	report := &GetFeatureResponseReport{
+	return &getFeatureResponseReport{
 		ReportID:                 reportBytes[0],
 		FeatureReportID:          reportBytes[1],
 		FeatureFlags:             reportBytes[2],
@@ -119,12 +119,10 @@ func NewGetFeatureResponseReport(reportBytes []byte) (
 		ReportInterval:           binary.LittleEndian.Uint32(reportBytes[5:9]),
 		BatchIntervalWord:        binary.LittleEndian.Uint32(reportBytes[9:13]),
 		SensorSpecificConfigWord: binary.LittleEndian.Uint32(reportBytes[13:17]),
-	}
-
-	return report, nil
+	}, nil
 }
 
-// NewShakeReport creates a new ShakeReport from the provided report bytes.
+// newShakeReport creates a new shakeReport from the provided report bytes.
 //
 // Parameters:
 //
@@ -132,20 +130,19 @@ func NewGetFeatureResponseReport(reportBytes []byte) (
 //
 // Returns:
 //
-//	A pointer to the newly created ShakeReport or an error if the report bytes are too short
-func NewShakeReport(reportBytes []byte) (*ShakeReport, error) {
+//	A pointer to the newly created shakeReport or an error if the report bytes are too short
+func newShakeReport(reportBytes []byte) (*shakeReport, error) {
 	// Validate the length of the report bytes
 	if len(reportBytes) < 6 {
 		return nil, ErrReportBytesTooShort
 	}
 
-	report := &ShakeReport{
+	return &shakeReport{
 		AreShakesDetected: binary.LittleEndian.Uint16(reportBytes[4:6])&0x111 > 0,
-	}
-	return report, nil
+	}, nil
 }
 
-// NewStepCounterReport creates a new StepCounterReport from the provided report bytes.
+// newStepCounterReport creates a new stepCounterReport from the provided report bytes.
 //
 // Parameters:
 //
@@ -153,20 +150,19 @@ func NewShakeReport(reportBytes []byte) (*ShakeReport, error) {
 //
 // Returns:
 //
-//	A pointer to the newly created StepCounterReport or an error if the report bytes are too short
-func NewStepCounterReport(reportBytes []byte) (*StepCounterReport, error) {
+//	A pointer to the newly created stepCounterReport or an error if the report bytes are too short
+func newStepCounterReport(reportBytes []byte) (*stepCounterReport, error) {
 	// Validate the length of the report bytes
 	if len(reportBytes) < 10 {
 		return nil, ErrReportBytesTooShort
 	}
 
-	report := &StepCounterReport{
+	return &stepCounterReport{
 		Count: binary.LittleEndian.Uint16(reportBytes[8:10]),
-	}
-	return report, nil
+	}, nil
 }
 
-// NewStabilityClassifierReport creates a new StabilityClassifierReport from the provided report bytes.
+// newStabilityClassifierReport creates a new stabilityClassifierReport from the provided report bytes.
 //
 // Parameters:
 //
@@ -174,9 +170,9 @@ func NewStepCounterReport(reportBytes []byte) (*StepCounterReport, error) {
 //
 // Returns:
 //
-//	A pointer to the newly created StabilityClassifierReport or an error if the report bytes are too short
-func NewStabilityClassifierReport(reportBytes []byte) (
-	*StabilityClassifierReport,
+//	A pointer to the newly created stabilityClassifierReport or an error if the report bytes are too short
+func newStabilityClassifierReport(reportBytes []byte) (
+	*stabilityClassifierReport,
 	error,
 ) {
 	// Validate the length of the report bytes
@@ -190,13 +186,13 @@ func NewStabilityClassifierReport(reportBytes []byte) (
 	if int(classificationBitfield) >= len(StabilityClassifications) {
 		return nil, ErrStabilityClassifierTooShort
 	}
-	report := &StabilityClassifierReport{
+
+	return &stabilityClassifierReport{
 		StabilityClassifier: StabilityClassifications[classificationBitfield],
-	}
-	return report, nil
+	}, nil
 }
 
-// NewSensorID parses the sensor ID from the provided buffer.
+// newSensorID parses the sensor ID from the provided buffer.
 //
 // Parameters:
 //
@@ -204,8 +200,8 @@ func NewStabilityClassifierReport(reportBytes []byte) (
 //
 // Returns:
 //
-//	A pointer to the newly created SensorID or an error if the buffer is too short
-func NewSensorID(buffer []byte) (*SensorID, error) {
+//	A pointer to the newly created sensorID or an error if the buffer is too short
+func newSensorID(buffer []byte) (*sensorID, error) {
 	// Validate the length of the buffer
 	if len(buffer) < 14 {
 		return nil, ErrBufferTooShort
@@ -215,17 +211,16 @@ func NewSensorID(buffer []byte) (*SensorID, error) {
 		return nil, ErrInvalidReportIDForSensorID
 	}
 
-	sensorID := &SensorID{
+	return &sensorID{
 		SoftwareMajorVersion: uint32(buffer[2]),
 		SoftwareMinorVersion: uint32(buffer[3]),
 		SoftwarePatchVersion: uint32(binary.LittleEndian.Uint16(buffer[12:14])),
 		SoftwarePartNumber:   binary.LittleEndian.Uint32(buffer[4:8]),
 		SoftwareBuildNumber:  binary.LittleEndian.Uint32(buffer[8:12]),
-	}
-	return sensorID, nil
+	}, nil
 }
 
-// NewCommandResponse creates a new CommandResponse from the provided report bytes.
+// newCommandResponse creates a new commandResponse from the provided report bytes.
 //
 // Parameters:
 //
@@ -233,8 +228,8 @@ func NewSensorID(buffer []byte) (*SensorID, error) {
 //
 // Returns:
 //
-//	A pointer to the newly created CommandResponse or an error if the report bytes are too short
-func NewCommandResponse(reportBytes []byte) (*CommandResponse, error) {
+//	A pointer to the newly created commandResponse or an error if the report bytes are too short
+func newCommandResponse(reportBytes []byte) (*commandResponse, error) {
 	// Validate the length of the report bytes
 	if len(reportBytes) < 16 {
 		return nil, ErrReportBytesTooShort
@@ -244,17 +239,16 @@ func NewCommandResponse(reportBytes []byte) (*CommandResponse, error) {
 		return nil, ErrInvalidReportIDForCommandResponse
 	}
 
-	commandResponse := &CommandResponse{
+	return &commandResponse{
 		SequenceNumber:         reportBytes[1],
 		Command:                reportBytes[2],
 		CommandSequenceNumber:  reportBytes[3],
 		ResponseSequenceNumber: reportBytes[4],
 		ResponseValues:         reportBytes[5:16],
-	}
-	return commandResponse, nil
+	}, nil
 }
 
-// NewActivityClassifierReport creates a new ActivityClassifierReport from the provided report bytes.
+// newActivityClassifierReport creates a new activityClassifierReport from the provided report bytes.
 //
 // Parameters:
 //
@@ -262,9 +256,9 @@ func NewCommandResponse(reportBytes []byte) (*CommandResponse, error) {
 //
 // Returns:
 //
-//	A pointer to the newly created ActivityClassifierReport or an error if the report bytes are too short
-func NewActivityClassifierReport(reportBytes []byte) (
-	*ActivityClassifierReport,
+//	A pointer to the newly created activityClassifierReport or an error if the report bytes are too short
+func newActivityClassifierReport(reportBytes []byte) (
+	*activityClassifierReport,
 	error,
 ) {
 	// Validate the length of the report bytes
@@ -296,7 +290,7 @@ func NewActivityClassifierReport(reportBytes []byte) (
 		}
 	}
 
-	report := &ActivityClassifierReport{
+	return &activityClassifierReport{
 		SequenceNumber:           reportBytes[1],
 		Status:                   reportBytes[2],
 		Delay:                    reportBytes[3],
@@ -304,11 +298,10 @@ func NewActivityClassifierReport(reportBytes []byte) (
 		MostLikely:               mostLikely,
 		MostLikelyClassification: mostLikelyClassification,
 		Classifications:          classifications,
-	}
-	return report, nil
+	}, nil
 }
 
-// NewSensorReportData parses sensor reports with only 16-bit fields.
+// newSensorReportData parses sensor reports with only 16-bit fields.
 //
 // Parameters:
 //
@@ -316,8 +309,8 @@ func NewActivityClassifierReport(reportBytes []byte) (
 //
 // Returns:
 //
-//	A pointer to the newly created SensorReportData or an error if the report bytes are too short
-func NewSensorReportData(reportBytes []byte) (*SensorReportData, error) {
+//	A pointer to the newly created sensorReportData or an error if the report bytes are too short
+func newSensorReportData(reportBytes []byte) (*sensorReportData, error) {
 	dataOffset := 4 // may not always be true
 
 	// Validate the length of the report bytes
@@ -365,12 +358,10 @@ func NewSensorReportData(reportBytes []byte) (*SensorReportData, error) {
 		results = append(results, scaledData)
 	}
 
-	report := &SensorReportData{
+	return &sensorReportData{
 		Results:  results,
 		Accuracy: accuracy,
-	}
-
-	return report, nil
+	}, nil
 }
 
 // ReportLength returns the length of the report based on the report ID.
