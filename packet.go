@@ -25,21 +25,26 @@ type (
 //
 // Parameters:
 //
-//	packetBytes: The byte slice containing the packet data.
+//	packetBytes: A pointer to a byte slice containing the packet data.
 //
 // Returns:
 //
 //	A packetHeader object or an error if the buffer is too short.
-func newPacketHeader(packetBytes []byte) (*packetHeader, error) {
+func newPacketHeader(packetBytes *[]byte) (*packetHeader, error) {
+	// Check if the provided packetBytes is nil
+	if packetBytes == nil {
+		return nil, ErrNilPacketBytes
+	}
+
 	// Ensure the buffer is at least 4 bytes long to read the header
-	if len(packetBytes) < 4 {
+	if len(*packetBytes) < 4 {
 		return nil, ErrBufferTooShortForHeader
 	}
 
-	packetByteCount := binary.LittleEndian.Uint16(packetBytes[0:2])
+	packetByteCount := binary.LittleEndian.Uint16((*packetBytes)[0:2])
 	packetByteCount &= ^uint16(0x8000)
-	channelNumber := packetBytes[2]
-	sequenceNumber := packetBytes[3]
+	channelNumber := (*packetBytes)[2]
+	sequenceNumber := (*packetBytes)[3]
 	dataLength := int(packetByteCount) - 4
 	if dataLength < 0 {
 		dataLength = 0
@@ -77,12 +82,17 @@ func (header *packetHeader) IsError() bool {
 //
 // Parameters:
 //
-//	packetBytes: The byte slice containing the packet data.
+//	packetBytes: A pointer to a byte slice containing the packet data.
 //
 // Returns:
 //
 //	A packet object or an error if the packet header could not be created.
-func newPacket(packetBytes []byte) (*packet, error) {
+func newPacket(packetBytes *[]byte) (*packet, error) {
+	// Check if the provided packetBytes is nil
+	if packetBytes == nil {
+		return nil, ErrNilPacketBytes
+	}
+
 	// Create a new packetHeader from the packet bytes
 	header, err := newPacketHeader(packetBytes)
 	if err != nil {
@@ -91,7 +101,7 @@ func newPacket(packetBytes []byte) (*packet, error) {
 
 	return &packet{
 		Header: header,
-		Data:   packetBytes[BnoHeaderLen : BnoHeaderLen+header.DataLength],
+		Data:   (*packetBytes)[BnoHeaderLen : BnoHeaderLen+header.DataLength],
 	}, nil
 }
 

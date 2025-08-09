@@ -17,7 +17,7 @@ SPDX-License-Identifier: MIT
 type (
 	// PacketReader is an interface for reading packets from the BNO08x sensor
 	PacketReader interface {
-		ReadPacket() ([]byte, error)
+		ReadPacket() (*packet, error)
 		IsDataReady() bool
 	}
 
@@ -34,7 +34,7 @@ type (
 		reset                   *machine.PinOutput
 		dataBuffer              []byte
 		commandBuffer           []byte
-		packetSlices            [][]byte
+		packetSlices            []*report
 		sequenceNumber          []int
 		twoEndedSequenceNumbers map[int]int
 		dcdSavedAt              float64
@@ -44,7 +44,7 @@ type (
 		waitForInitialize       bool
 		initComplete            bool
 		idRead                  bool
-		readings                map[int]interface{}
+		readings                map[uint8]interface{}
 	}
 
 	// Options struct holds configuration options for the BNO08X instance
@@ -75,7 +75,7 @@ func NewBNO08X(packetReader PacketReader, packetWriter PacketWriter, options *Op
 		reset:                   options.Reset,
 		dataBuffer:              make([]byte, DataBufferSize),
 		commandBuffer:           make([]byte, CommandBufferSize),
-		packetSlices:            make([][]byte, 0),
+		packetSlices:            make([][]interface{}, 0),
 		sequenceNumber:          make([]int, 6), // Assuming 6 channels
 		twoEndedSequenceNumbers: make(map[int]int),
 		dcdSavedAt:              -1.0,
@@ -85,7 +85,7 @@ func NewBNO08X(packetReader PacketReader, packetWriter PacketWriter, options *Op
 		waitForInitialize:       true,
 		initComplete:            false,
 		idRead:                  false,
-		readings:                make(map[int]interface{}),
+		readings:                make(map[uint8]interface{}),
 	}
 	bno08x.debug("********** NewBNO08X *************")
 
@@ -302,7 +302,7 @@ func (b *BNO08X) getData(index, numberBytes int) (int, error) {
 // Returns:
 //
 //  A pointer to the packet if found, or an error if the timeout is reached or an error occurs.
-func (b *BNO08X) waitForPacketType(channelNumber uint8, reportID *uint8, timeout *time.Duration) (*Packet, error) {
+func (b *BNO08X) waitForPacketType(channelNumber uint8, reportID *uint8, timeout *time.Duration) (*packet, error) {
 	startTime := time.Now()
 
 	// Check if reportID is provided, and prepare a debug message accordingly
@@ -335,7 +335,9 @@ func (b *BNO08X) waitForPacketType(channelNumber uint8, reportID *uint8, timeout
 		}
 		if newPacket.ChannelNumber() != BnoChannelExe && newPacket.ChannelNumber() != BnoChannelSHTPCommand {
 			b.debug("passing packet to handler for de-slicing")
-			b.handlePacket(newPacket)
+			if err := b.handlePacket(newPacket); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return nil, fmt.Errorf("timed out waiting for a packet on channel %d", channelNumber)
@@ -366,6 +368,141 @@ func (b *BNO08X) waitForPacket(timeout time.Duration) (*packet, error) {
 		return newPacket, nil
 	}
 	return nil, ErrPacketTimeout
+}
+
+func (b *BNO08X) handlePacket(packet *packet) error {
+	// Split out reports first
+	if err := separateBatch(packet, &b.packetSlices); err != nil {
+		fmt.Println(packet)
+		return err
+	}
+
+	// Process each report in the packet slices
+	for len(b.packetSlices) > 0 {
+		// Pop the last slice
+		lastReport := b.packetSlices[len(b.packetSlices)-1]
+		b.packetSlices = b.packetSlices[:len(b.packetSlices)-1]
+
+		// Process the report
+		if err := b.processReport(lastReport.ID, lastReport.Data); err != nil {
+			b.debug("Error processing report:", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *BNO08X) processReport(reportID uint8, reportBytes []byte) error {
+	if reportID >= 0xF0 {
+		return b.handleControlReport(reportID, reportBytes)
+	}
+
+	b.debug("\tProcessing report:", Reports[reportID])
+	if b.debugFlag {
+		outputStr := ""
+		for idx, packetByte := range reportBytes {
+			packetIndex := idx
+			if (packetIndex % 4) == 0 {
+				outputStr += fmt.Sprintf("\nDBG::\t\t[0x%02X] ", packetIndex)
+			}
+			outputStr += fmt.Sprintf("0x%02X ", packetByte)
+		}
+		b.debug(outputStr)
+	}
+
+	switch reportID {
+	case BnoReportStepCounter:
+		// Parse the step counter report
+		stepCounterReport, err := newStepCounterReport(&reportBytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse step counter report: %w", err)
+		}
+
+		// Update the readings map with the step count
+		b.readings[BnoReportStepCounter] = stepCounterReport.Count
+		return nil
+	case BnoReportShakeDetector:
+		// Parse the shake detector report
+		shakeReport, err := newShakeReport(&reportBytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse shake report: %w", err)
+		}
+
+		// Update the readings map with the shake detection status
+		b.readings[BnoReportShakeDetector] = shakeReport.AreShakesDetected
+		return nil
+	case BnoReportStabilityClassifier:
+		// Parse the stability classifier report
+		stabilityReport, err := newStabilityClassifierReport(&reportBytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse stability classifier report: %w", err)
+		}
+
+		// Update the readings map with the stability classification
+		b.readings[BnoReportStabilityClassifier] = stabilityReport.StabilityClassifcation
+		return nil
+	case BnoReportActivityClassifier:
+		// Parse the activity classifier report
+		activityReport, err := newActivityClassifierReport(&reportBytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse activity classifier report: %w", err)
+		}
+
+		// Update the readings map with the activity classifications
+		b.readings[BnoReportActivityClassifier] = activityReport.Classifications
+		return nil
+	default:
+		// Parse the sensor report data
+		sensorReport, err := newSensorReportData(&reportBytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse sensor report data: %w", err)
+		}
+
+		// Check if the report ID is for the magnetometer and update its accuracy
+		if reportID == BnoReportMagnetometer {
+			b.magnetometerAccuracy = sensorReport.Accuracy
+		}
+		b.readings[reportID] = sensorReport.Results
+		return nil
+	}
+}
+
+func (b *BNO08X) handleControlReport(reportID uint8, reportBytes []byte) error {
+	switch reportID {
+	case SHTPReportProductIDResponseID:
+		// Parse the sensor ID from the report bytes
+		sensorID, err := newSensorID(&reportBytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse sensor ID: %w", err)
+		}
+		b.debug("FROM PACKET SLICE:")
+		b.debug(fmt.Sprintf("*** Part Number: %d", sensorID.SoftwarePartNumber))
+		b.debug(fmt.Sprintf(
+			"*** Software Version: %d.%d.%d",
+			sensorID.SoftwareMajorVersion,
+			sensorID.SoftwareMinorVersion,
+			sensorID.SoftwarePatchVersion,
+			),
+		)
+		b.debug(fmt.Sprintf("\tBuild: %d", sensorID.SoftwareBuildNumber))
+	case GetFeatureCommandID:
+		// Parse the Get Feature report from the report bytes
+		getFeatureReport, err := newGetFeatureResponseReport(&reportBytes)
+		if err != nil {
+			return fmt.Errorf("failed to parse get feature report: %w", err)
+		}
+
+		// Check if the feature report ID is in the InitialReports map
+		featureReportID := getFeatureReport.ReportID
+		if val, ok := InitialReports[featureReportID]; ok {
+			b.readings[featureReportID] = val
+		} else {
+			b.readings[featureReportID] = [3]float64{0.0, 0.0, 0.0}
+		}
+	case CommandResponseID:
+		return b.handleCommandResponse(reportBytes)
+	}
+	return nil
 }
 
 @property
@@ -648,44 +785,6 @@ channel = new_packet.channel_number
 seq = new_packet.header.sequence_number
 self._sequence_number[channel] = seq
 
-func _handle_packet(self, packet: Packet) -> None:
-// split out Reports first
-try:
-_separate_batch(packet, self._packet_slices)
-while len(self._packet_slices) > 0:
-self._process_report(*self._packet_slices.pop())
-except Exception as error:
-print(packet)
-raise error
-
-func _handle_control_report(
-	self,
-	report_id: int,
-	report_bytes: bytearray,
-) -> None:
-if report_id == SHTPReportProductIdResponse:
-(
-sw_part_number,
-sw_major,
-sw_minor,
-sw_patch,
-sw_build_number,
-) = parse_sensor_id(report_bytes)
-self._dbg("FROM PACKET SLICE:")
-self._dbg("*** Part Number: %d" % sw_part_number)
-self._dbg("*** Software Version: %d.%d.%d" % (sw_major, sw_minor, sw_patch))
-self._dbg("\tBuild: %d" % (sw_build_number))
-self._dbg("")
-
-if report_id == GetFeatureCommand:
-get_feature_report = _parse_get_feature_response_report(report_bytes)
-_report_id, feature_report_id, *_remainder = get_feature_report
-self._readings[feature_report_id] = InitialReports.get(
-feature_report_id, (0.0, 0.0, 0.0)
-)
-if report_id == CommandResponse:
-self._handle_command_response(report_bytes)
-
 func _handle_command_response(self, report_bytes: bytearray) -> None:
 (report_body, response_values) = _parse_command_response(report_bytes)
 
@@ -707,52 +806,6 @@ if command == SaveDCD:
 if command_status == 0:
 self._dcd_saved_at = time.monotonic() else:
 raise RuntimeError("Unable to save calibration data")
-
-func _process_report(self, report_id: int, report_bytes: bytearray) -> None:
-if report_id >= 0xF0:
-self._handle_control_report(report_id, report_bytes)
-return
-self._dbg("\tProcessing report:", Reports[report_id])
-if self._debug:
-outstr = ""
-for idx, packet_byte in enumerate(report_bytes):
-packet_index = idx
-if (packet_index % 4) == 0:
-outstr += f"\nDBG::\t\t[0x{packet_index:02X}] "
-outstr += f"0x{packet_byte:02X} "
-self._dbg(outstr)
-self._dbg("")
-
-if report_id == BnoReportStepCounter:
-self._readings[report_id] = _parse_step_couter_report(report_bytes)
-return
-
-if report_id == BnoReportShakeDetector:
-shake_detected = _parse_shake_report(report_bytes)
-// shake not previously detected - auto cleared by 'shake' property
-try:
-if not self._readings[BnoReportShakeDetector]:
-self._readings[BnoReportShakeDetector] = shake_detected
-except KeyError:
-pass
-return
-
-if report_id == BnoReportStabilityClassifier:
-stability_classification = _parse_stability_classifier_report(report_bytes)
-self._readings[BnoReportStabilityClassifier] = stability_classification
-return
-
-if report_id == BnoReportActivityClassifier:
-activity_classification = _parse_activity_classifier_report(report_bytes)
-self._readings[BnoReportActivityClassifier] = activity_classification
-return
-sensor_data, accuracy = _parse_sensor_report_data(report_bytes)
-if report_id == BnoReportMagnetometer:
-self._magnetometer_accuracy = accuracy
-// TODO: FIXME; Sensor Reports are batched in a LIFO which means that multiple Reports
-// for the same type will end with the oldest/last being kept and the other
-// newer Reports thrown away
-self._readings[report_id] = sensor_data
 
 // TODO: Make this a packet creation
 @staticmethod

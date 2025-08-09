@@ -1,6 +1,7 @@
 package go_adafruit_bno055
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
@@ -24,28 +25,48 @@ func elapsedTime(startTime time.Time) time.Duration {
 //
 //	packet: The packet to separate into reports.
 //	reportSlices: A pointer to a slice of slices where the separated reports will be appended.
-func separateBatch(packet packet, reportSlices *[][]interface{}) {
+//
+// Returns:
+//
+// An error if the packet cannot be processed due to insufficient bytes or other issues.
+func separateBatch(packet *packet, reportSlices *[]*report) error {
+	// Check if the packet is nil
+	if packet == nil {
+		return ErrNilPacket
+	}
+
+	// Ensure the packet has a valid header
 	nextByteIndex := 0
 	for nextByteIndex < packet.Header.DataLength {
+		// Check if there are enough bytes left in the packet to read the report ID
 		reportID := packet.Data[nextByteIndex]
-		requiredBytes := ReportLength(reportID)
-
+		requiredBytes := reportLength(reportID)
 		unprocessedByteCount := packet.Header.DataLength - nextByteIndex
 
 		if unprocessedByteCount < requiredBytes {
-			panic(
+			return errors.New(
 				fmt.Sprintf(
-					"Unprocessable Batch bytes: %d",
+					"unprocessable Batch bytes: %d",
 					unprocessedByteCount,
 				),
 			)
 		}
 
 		reportSlice := packet.Data[nextByteIndex : nextByteIndex+requiredBytes]
+		report, err := newReport(reportID, &reportSlice)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to create report from bytes: %w",
+				err,
+			)
+		}
+
+		// Append the new report to the reportSlices
 		*reportSlices = append(
 			*reportSlices,
-			[]interface{}{reportSlice[0], reportSlice},
+			report,
 		)
 		nextByteIndex += requiredBytes
 	}
+	return nil
 }
