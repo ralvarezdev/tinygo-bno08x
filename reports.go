@@ -12,14 +12,6 @@ type (
 		ReportLength int
 	}
 
-	// PacketHeader represents the header of a BNO08x packet
-	PacketHeader struct {
-		ChannelNumber   uint8
-		SequenceNumber  uint8
-		DataLength      int
-		PacketByteCount int
-	}
-
 	// SensorReportData represents a parsed sensor report with 16-bit fields
 	SensorReportData struct {
 		Results  []int
@@ -317,6 +309,14 @@ func NewActivityClassifierReport(reportBytes []byte) (
 }
 
 // NewSensorReportData parses sensor reports with only 16-bit fields.
+//
+// Parameters:
+//
+//	reportBytes: The byte slice containing the sensor report data
+//
+// Returns:
+//
+//	A pointer to the newly created SensorReportData or an error if the report bytes are too short
 func NewSensorReportData(reportBytes []byte) (*SensorReportData, error) {
 	dataOffset := 4 // may not always be true
 
@@ -371,4 +371,64 @@ func NewSensorReportData(reportBytes []byte) (*SensorReportData, error) {
 	}
 
 	return report, nil
+}
+
+// ReportLength returns the length of the report based on the report ID.
+//
+// Parameters:
+//
+//	reportID: The ID of the report
+//
+// Returns:
+//
+//	The length of the report in bytes
+func ReportLength(reportID uint8) int {
+	if reportID < 0xF0 { // it's a sensor report
+		return AvailableSensorReports[reportID].ReportLength
+	}
+
+	return ReportLengths[reportID]
+}
+
+// InsertCommandRequestReport inserts a command request report into the provided buffer.
+//
+// Parameters:
+//
+//	command: The command to be inserted
+//	buffer: The byte slice to insert the command request report into
+//	nextSequenceNumber: The next sequence number for the command request
+//	commandParams: The parameters for the command request, can be nil or up to 9 integers
+//
+// Returns:
+//
+// An error if the command parameters exceed the limit or if the buffer is too short
+func InsertCommandRequestReport(
+	command int,
+	buffer []byte,
+	nextSequenceNumber int,
+	commandParams []int,
+) error {
+	if commandParams != nil && len(commandParams) > 9 {
+		return ErrCommandRequestTooManyArguments
+	}
+	if len(buffer) < 12 {
+		return ErrBufferTooShort
+	}
+
+	// Initialize the buffer with zeros
+	for i := 0; i < 12; i++ {
+		buffer[i] = 0
+	}
+
+	// Insert the command request report into the buffer
+	buffer[0] = CommandRequestID
+	buffer[1] = byte(nextSequenceNumber)
+	buffer[2] = byte(command)
+	if commandParams == nil {
+		return nil
+	}
+	for idx, param := range commandParams {
+		buffer[3+idx] = byte(param)
+	}
+	return nil
 }

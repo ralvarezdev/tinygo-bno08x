@@ -6,144 +6,27 @@ SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
 SPDX-License-Identifier: MIT
  */
 
-func _insert_command_request_report(
-    command: int,
-    buffer: bytearray,
-    next_sequence_number: int,
-    command_params: Optional[list[int]] = None,
-) -> None:
-    if command_params and len(command_params) > 9:
-        raise AttributeError(
-            "Command request Reports can only have up to 9 arguments but %d were given"
-            % len(command_params)
-        )
-    for _i in range(12):
-        buffer[_i] = 0
-    buffer[0] = CommandRequest
-    buffer[1] = next_sequence_number
-    buffer[2] = command
-    if command_params is None:
-        return
-
-    for idx, param in enumerate(command_params):
-        buffer[3 + idx] = param
-
-
-func _report_length(report_id: int) -> int:
-    if report_id < 0xF0:  // it's a sensor report
-        return AvailableSensorReports[report_id][2]
-
-    return ReportLengths[report_id]
-
 
 func _separate_batch(packet: Packet, report_slices: list[Any]) -> None:
-    // get first report id, loop up its report length
-    // read that many bytes, parse them
-    next_byte_index = 0
-    while next_byte_index < packet.header.data_length:
-        report_id = packet.data[next_byte_index]
-        required_bytes = _report_length(report_id)
+// get first report id, loop up its report length
+// read that many bytes, parse them
+next_byte_index = 0
+while next_byte_index < packet.header.data_length:
+report_id = packet.data[next_byte_index]
+required_bytes = _report_length(report_id)
 
-        unprocessed_byte_count = packet.header.data_length - next_byte_index
+unprocessed_byte_count = packet.header.data_length - next_byte_index
 
-        // handle incomplete remainder
-        if unprocessed_byte_count < required_bytes:
-            raise RuntimeError("Unprocessable Batch bytes", unprocessed_byte_count)
-        // we have enough bytes to read
-        // add a slice to the list that was passed in
-        report_slice = packet.data[next_byte_index : next_byte_index + required_bytes]
+// handle incomplete remainder
+if unprocessed_byte_count < required_bytes:
+raise RuntimeError("Unprocessable Batch bytes", unprocessed_byte_count)
+// we have enough bytes to read
+// add a slice to the list that was passed in
+report_slice = packet.data[next_byte_index : next_byte_index + required_bytes]
 
-        report_slices.append([report_slice[0], report_slice])
-        next_byte_index = next_byte_index + required_bytes
-
-
-class Packet:
-    """A class representing a Hillcrest LaboratorySensor Hub Transport packet"""
-
-    func __init__(self, packet_bytes: bytearray) -> None:
-        self.header = self.header_from_buffer(packet_bytes)
-        data_end_index = self.header.data_length + BnoHeaderLen
-        self.data = packet_bytes[BnoHeaderLen:data_end_index]
-
-    func __str__(self) -> str:
-        length = self.header.packet_byte_count
-        outstr = "\n\t\t********** Packet *************\n"
-        outstr += "DBG::\t\t HEADER:\n"
-
-        outstr += "DBG::\t\t Data Len: %d\n" % (self.header.data_length)
-        outstr += "DBG::\t\t Channel: %s (%d)\n" % (
-            Channels[self.channel_number],
-            self.channel_number,
-        )
-        if self.channel_number in {
-            BnoChannelCONTROL,
-            BnoChannelInputSensorReports,
-        }:
-            if self.report_id in Reports:
-                outstr += "DBG::\t\t \tReport Type: %s (0x%x)\n" % (
-                    Reports[self.report_id],
-                    self.report_id,
-                )
-            else:
-                outstr += "DBG::\t\t \t** UNKNOWN Report Type **: %s\n" % hex(self.report_id)
-
-            if self.report_id > 0xF0 and len(self.data) >= 6 and self.data[5] in Reports:
-                outstr += "DBG::\t\t \tSensor Report Type: %s(%s)\n" % (
-                    Reports[self.data[5]],
-                    hex(self.data[5]),
-                )
-
-            if self.report_id == 0xFC and len(self.data) >= 6 and self.data[1] in Reports:
-                outstr += "DBG::\t\t \tEnabled Feature: %s(%s)\n" % (
-                    Reports[self.data[1]],
-                    hex(self.data[5]),
-                )
-        outstr += "DBG::\t\t Sequence number: %s\n" % self.header.sequence_number
-        outstr += "\n"
-        outstr += "DBG::\t\t Data:"
-
-        for idx, packet_byte in enumerate(self.data[:length]):
-            packet_index = idx + 4
-            if (packet_index % 4) == 0:
-                outstr += f"\nDBG::\t\t[0x{packet_index:02X}] "
-            outstr += f"0x{packet_byte:02X} "
-        outstr += "\n"
-        outstr += "\t\t*******************************\n"
-
-        return outstr
-
-    @property
-    func report_id(self) -> int:
-        """The Packet's Report ID"""
-        return self.data[0]
-
-    @property
-    func channel_number(self) -> int:
-        """The packet channel"""
-        return self.header.channel_number
-
-    @classmethod
-    func header_from_buffer(cls, packet_bytes: bytearray) -> PacketHeader:
-        """Creates a `PacketHeader` object from a given buffer"""
-        packet_byte_count = unpack_from("<H", packet_bytes)[0]
-        packet_byte_count &= ~0x8000
-        channel_number = unpack_from("<B", packet_bytes, offset=2)[0]
-        sequence_number = unpack_from("<B", packet_bytes, offset=3)[0]
-        data_length = max(0, packet_byte_count - 4)
-
-        header = PacketHeader(channel_number, sequence_number, data_length, packet_byte_count)
-        return header
-
-    @classmethod
-    func is_error(cls, header: PacketHeader) -> bool:
-        """Returns True if the header is an error condition"""
-
-        if header.channel_number > 5:
-            return True
-        if header.packet_byte_count == 0xFFFF and header.sequence_number == 0xFF:
-            return True
-        return False
-
+report_slices.append([report_slice[0], report_slice])
+next_byte_index = next_byte_index + required_bytes
+}
 
 class BNO08X:
     """Library for the BNO08x IMUs from Hillcrest Laboratories
@@ -734,15 +617,15 @@ class BNO08X:
         self._dbg("OK!")
         // all is good!
 
-    func _send_packet(self, channel: int, data: bytearray) -> Optional[int]:  // noqa: PLR6301
-        raise RuntimeError("Not implemented")
-
-    func _read_packet(self) -> Optional[Packet]:  // noqa: PLR6301
-        raise RuntimeError("Not implemented")
-
     func _increment_report_seq(self, report_id: int) -> None:
         current = self._two_ended_sequence_numbers.get(report_id, 0)
         self._two_ended_sequence_numbers[report_id] = (current + 1) % 256
 
     func _get_report_seq_id(self, report_id: int) -> int:
         return self._two_ended_sequence_numbers.get(report_id, 0)
+
+	func _send_packet(self, channel: int, data: bytearray) -> Optional[int]:  // noqa: PLR6301
+		raise RuntimeError("Not implemented")
+
+	func _read_packet(self) -> Optional[Packet]:  // noqa: PLR6301
+		raise RuntimeError("Not implemented")

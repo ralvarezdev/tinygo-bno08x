@@ -6,12 +6,12 @@ import (
 
 const (
 	// Channel 0: the SHTP command channel
-	BnoChannelSHTPCommand            int = 0
-	BnoChannelExe                    int = 1
-	BnoChannelCONTROL                int = 2
-	BnoChannelInputSensorReports     int = 3
-	BnoChannelWakeInputSensorReports int = 4
-	BnoChannelGyroRotationVector     int = 5
+	BnoChannelSHTPCommand            uint8 = 0
+	BnoChannelExe                    uint8 = 1
+	BnoChannelCONTROL                uint8 = 2
+	BnoChannelInputSensorReports     uint8 = 3
+	BnoChannelWakeInputSensorReports uint8 = 4
+	BnoChannelGyroRotationVector     uint8 = 5
 
 	GetFeatureRequestID uint8 = 0xFE
 	SetFeatureCommandID uint8 = 0xFD
