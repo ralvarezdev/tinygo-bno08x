@@ -2,6 +2,7 @@ package go_adafruit_bno055
 
 import (
 	"math"
+	"time"
 )
 
 const (
@@ -126,7 +127,7 @@ const (
 	ReportIDGyroscopeIntegratedRotationVector uint8 = 0x2A
 
 	// DefaultReportInterval is the default report interval in microseconds
-	DefaultReportInterval float32 = 50000
+	DefaultReportInterval uint32 = 50000
 
 	// QuaternionReadTimeout is the timeout for reading quaternion data in seconds
 	QuaternionReadTimeout float32 = 0.500
@@ -135,10 +136,10 @@ const (
 	PacketReadTimeout float32 = 2.000
 
 	// FeatureEnableTimeout is the timeout for enabling features in seconds
-	FeatureEnableTimeout float32 = 2.0
+	FeatureEnableTimeout = 2.0 * time.Second
 
 	// DefaultTimeout is the default timeout for operations in seconds
-	DefaultTimeout float32 = 2.0
+	DefaultTimeout = 2.0 * time.Second
 
 	// CommandReset is the command to reset the BNO08x sensor
 	CommandReset uint8 = 0x01
@@ -147,7 +148,7 @@ const (
 	PacketHeaderLength int = 4
 
 	// EnabledActivities is a bitmask for enabled activities. All activities; 1 bit set for each of 8 activities, + Unknown
-	EnabledActivities uint = 0x1FF
+	EnabledActivities uint32 = 0x1FF
 
 	// DataBufferSize is the size of the data buffer used for reading and writing
 	DataBufferSize = 512

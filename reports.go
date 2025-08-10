@@ -116,6 +116,56 @@ func newReport(id uint8, data *[]byte) (*report, error) {
 	}, nil
 }
 
+// newReportFromPacket creates a new report from the provided packet.
+//
+// Parameters:
+//
+//	packet: A pointer to a packet containing the report data.
+//
+// Returns:
+//
+// A pointer to the newly created report or an error if the packet is nil
+func newReportFromPacket(packet *packet) (*report, error) {
+	// Check if the provided packet is nil
+	if packet == nil {
+		return nil, ErrNilPacket
+	}
+
+	// Get the report ID from the packet
+	reportID, err := packet.ReportID()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get report ID: %w", err)
+	}
+
+	// Create a new report from the packet data
+	return newReport(reportID, &packet.Data)
+}
+
+// newReportFromPacketBytes creates a new report from the provided packet bytes.
+//
+// Parameters:
+//
+//	packetBytes: A pointer to a byte slice containing the packet bytes.
+//
+// Returns:
+//
+// A pointer to the newly created report or an error if the packet bytes are nil
+func newReportFromPacketBytes(packetBytes *[]byte) (*report, error) {
+	// Check if the provided packet bytes are nil
+	if packetBytes == nil {
+		return nil, ErrNilPacketBytes
+	}
+
+	// Create a new packet from the packet bytes
+	packet, err := newPacket(packetBytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create packet from bytes: %w", err)
+	}
+
+	// Create a new report from the packet
+	return newReportFromPacket(packet)
+}
+
 // newSensorReport creates a new sensorReport from the provided report bytes.
 //
 // Parameters:
@@ -634,10 +684,10 @@ func isSensorReport(reportID uint8) bool {
 //
 // An error if the command parameters exceed the limit or if the buffer is too short
 func insertCommandRequestReport(
-	command int,
+	command uint8,
 	buffer *[]byte,
 	nextSequenceNumber int,
-	commandParameters *[]int,
+	commandParameters *[]byte,
 ) error {
 	// Check if the provided buffer is nil
 	if buffer == nil {
@@ -659,12 +709,12 @@ func insertCommandRequestReport(
 	// Insert the command request report into the buffer
 	(*buffer)[0] = ReportIDCommandRequest
 	(*buffer)[1] = byte(nextSequenceNumber)
-	(*buffer)[2] = byte(command)
+	(*buffer)[2] = command
 	if commandParameters == nil {
 		return nil
 	}
 	for idx, param := range *commandParameters {
-		(*buffer)[3+idx] = byte(param)
+		(*buffer)[3+idx] = param
 	}
 	return nil
 }
