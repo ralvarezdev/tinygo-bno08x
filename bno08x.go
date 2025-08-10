@@ -551,6 +551,69 @@ func (b *BNO08X) processReport(report *report) error {
 
 		// Update the game rotation vector readings in the BNO08X instance
 		b.gameRotationVector = &gameReport.Results
+	case ReportIDAccelerometer:
+		// Parse the accelerometer report
+		accelerometerReport, err := newThreeDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse accelerometer report: %w", err)
+		}
+
+		// Update the accelerometer readings in the BNO08X instance
+		b.accelerometer = &accelerometerReport.Results
+	case ReportIDLinearAcceleration:
+		// Parse the linear acceleration report
+		linearAccelerationReport, err := newThreeDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse linear acceleration report: %w", err)
+		}
+
+		// Update the linear acceleration readings in the BNO08X instance
+		b.linearAcceleration = &linearAccelerationReport.Results
+	case ReportIDGravity:
+		// Parse the gravity report
+		gravityReport, err := newThreeDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse gravity report: %w", err)
+		}
+
+		// Update the gravity readings in the BNO08X instance
+		b.gravity = &gravityReport.Results
+	case ReportIDGyroscope:
+		// Parse the gyroscope report
+		gyroscopeReport, err := newThreeDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse gyroscope report: %w", err)
+		}
+
+		// Update the gyroscope readings in the BNO08X instance
+		b.gyroscope = &gyroscopeReport.Results
+	case ReportIDRawAccelerometer:
+		// Parse the raw accelerometer report
+		rawAccelerometerReport, err := newThreeDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse raw accelerometer report: %w", err)
+		}
+
+		// Update the raw accelerometer readings in the BNO08X instance
+		b.rawAccelerometer = &rawAccelerometerReport.Results
+	case ReportIDRawGyroscope:
+		// Parse the raw gyroscope report
+		rawGyroscopeReport, err := newThreeDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse raw gyroscope report: %w", err)
+		}
+
+		// Update the raw gyroscope readings in the BNO08X instance
+		b.rawGyroscope = &rawGyroscopeReport.Results
+	case ReportIDRawMagnetometer:
+		// Parse the raw magnetometer report
+		rawMagnetometerReport, err := newThreeDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse raw magnetometer report: %w", err)
+		}
+
+		// Update the raw magnetometer readings in the BNO08X instance
+		b.rawMagnetometer = &rawMagnetometerReport.Results
 	}
 
 	// If we reach here, the report was processed successfully
@@ -590,9 +653,6 @@ func (b *BNO08X) handleControlReport(report *report) error {
 		if err != nil {
 			return fmt.Errorf("failed to parse get feature report: %w", err)
 		}
-
-		// Check if the feature report ID is in the InitialReports map
-		// featureReportID := getFeatureReport.ReportID
 	case ReportIDCommandResponse:
 		return b.handleCommandResponse(report)
 	}
@@ -699,145 +759,109 @@ func (b *BNO08X) GameQuaternion() *[4]float64 {
 	return b.gameRotationVector
 }
 
-@property
-func steps(self) -> Optional[int]:
-"""The number of steps detected since the sensor was initialized"""
-self._process_available_packets()
-try:
-return self._readings[BnoReportStepCounter]
-except KeyError:
-raise RuntimeError("No steps report found, is it enabled?") from None
+// Steps returns the number of steps detected since the sensor was initialized.
+//
+// Returns:
+//   A pointer to an uint16 representing the step count.
+func (b *BNO08X) Steps() *uint16 {
+	b.processAvailablePackets(nil)
+	return b.stepCount
+}
 
-@property
-func linear_acceleration(self) -> Optional[tuple[float, float, float]]:
-"""A tuple representing the current linear acceleration values on the X, Y, and Z
-axes in meters per second squared"""
-self._process_available_packets()
-try:
-return self._readings[BnoReportLinearAcceleration]
-except KeyError:
-raise RuntimeError("No lin. accel report found, is it enabled?") from None
+// LinearAcceleration returns the current linear acceleration values on the X, Y, and Z axes in meters per second squared.
+//
+// Returns:
+//   A pointer to a [3]float64 array containing the linear acceleration values.
+func (b *BNO08X) LinearAcceleration() *[3]float64 {
+	b.processAvailablePackets(nil)
+	return b.linearAcceleration
+}
 
-@property
-func acceleration(self) -> Optional[tuple[float, float, float]]:
-"""A tuple representing the acceleration measurements on the X, Y, and Z
-axes in meters per second squared"""
-self._process_available_packets()
-try:
-return self._readings[BnoReportAccelerometer]
-except KeyError:
-raise RuntimeError("No accel report found, is it enabled?") from None
+// Acceleration returns the acceleration measurements on the X, Y, and Z axes in meters per second squared.
+//
+// Returns:
+//   A pointer to a [3]float64 array containing the acceleration values.
+func (b *BNO08X) Acceleration() *[3]float64 {
+	b.processAvailablePackets(nil)
+	return b.accelerometer
+}
 
-@property
-func gravity(self) -> Optional[tuple[float, float, float]]:
-"""A tuple representing the gravity vector in the X, Y, and Z components
-axes in meters per second squared"""
-self._process_available_packets()
-try:
-return self._readings[BnoReportGravity]
-except KeyError:
-raise RuntimeError("No gravity report found, is it enabled?") from None
+// Gravity returns the gravity vector in the X, Y, and Z components in meters per second squared.
+//
+// Returns:
+//   A pointer to a [3]float64 array containing the gravity vector.
+func (b *BNO08X) Gravity() *[3]float64 {
+	b.processAvailablePackets(nil)
+	return b.gravity
+}
 
-@property
-func gyro(self) -> Optional[tuple[float, float, float]]:
-"""A tuple representing Gyro's rotation measurements on the X, Y, and Z
-axes in radians per second"""
-self._process_available_packets()
-try:
-return self._readings[BnoReportGyroscope]
-except KeyError:
-raise RuntimeError("No gyro report found, is it enabled?") from None
+// Gyro returns Gyro's rotation measurements on the X, Y, and Z axes in radians per second.
+//
+// Returns:
+//   A pointer to a [3]float64 array containing the gyroscope values.
+func (b *BNO08X) Gyro() *[3]float64 {
+	b.processAvailablePackets(nil)
+	return b.gyroscope
+}
 
-@property
-func shake(self) -> Optional[bool]:
-"""True if a shake was detected on any axis since the last time it was checked
+// Shake returns true if a shake was detected on any axis since the last time it was checked.
+// This method has a latching behavior: once a shake is detected, it stays "shaken" until read.
+//
+// Returns:
+//   A pointer to a bool indicating if a shake was detected.
+func (b *BNO08X) Shake() *bool {
+	b.processAvailablePackets(nil)
+	if b.shakesDetected != nil && *b.shakesDetected {
+		*b.shakesDetected = false // clear on read
+		return b.shakesDetected
+	}
+	return b.shakesDetected
+}
 
-This property has a "latching" behavior where once a shake is detected, it will stay in a
-"shaken" state until the value is read.This prevents missing shake events but means that
-this property is not guaranteed to reflect the shake state at the moment it is read
-"""
-self._process_available_packets()
-try:
-shake_detected = self._readings[BnoReportShakeDetector]
-// clear on read
-if shake_detected:
-self._readings[BnoReportShakeDetector] = False
-return shake_detected
-except KeyError:
-raise RuntimeError("No shake report found, is it enabled?") from None
+// StabilityClassification returns the sensor's assessment of its current stability.
+//
+// Returns:
+//   A pointer to a string describing the stability classification.
+func (b *BNO08X) StabilityClassification() *string {
+	b.processAvailablePackets(nil)
+	return b.stabilityClassification
+}
 
-@property
-func stability_classification(self) -> Optional[str]:
-"""Returns the sensor's assessment of it's current stability, one of:
+// ActivityClassification returns the sensor's assessment of the activity creating the sensed motions.
+//
+// Returns:
+//   A pointer to a map[string]int representing activity classifications.
+func (b *BNO08X) ActivityClassification() *map[string]int {
+	b.processAvailablePackets(nil)
+	return b.classifications
+}
 
-* "Unknown" - The sensor is unable to classify the current stability
-* "On Table" - The sensor is at rest on a stable surface with very little vibration
-* "Stationary" -  The sensor’s motion is below the stable threshold but\
-the stable duration requirement has not been met.This output is only available when\
-gyro calibration is enabled
-* "Stable" - The sensor’s motion has met the stable threshold and duration requirements.
-* "In motion" - The sensor is moving.
+// RawAcceleration returns the sensor's raw, unscaled value from the accelerometer registers.
+//
+// Returns:
+//   A pointer to a [3]float64 array containing the raw accelerometer values.
+func (b *BNO08X) RawAcceleration() *[3]float64 {
+	b.processAvailablePackets(nil)
+	return b.rawAccelerometer
+}
 
-"""
-self._process_available_packets()
-try:
-stability_classification = self._readings[BnoReportStabilityClassifier]
-return stability_classification
-except KeyError:
-raise RuntimeError("No stability classification report found, is it enabled?") from None
+// RawGyro returns the sensor's raw, unscaled value from the gyro registers.
+//
+// Returns:
+//   A pointer to a [3]float64 array containing the raw gyroscope values.
+func (b *BNO08X) RawGyro() *[3]float64 {
+	b.processAvailablePackets(nil)
+	return b.rawGyroscope
+}
 
-@property
-func activity_classification(self) -> Optional[dict]:
-"""Returns the sensor's assessment of the activity that is creating the motions\
-that it is sensing, one of:
-
-* "Unknown"
-* "In-Vehicle"
-* "On-Bicycle"
-* "On-Foot"
-* "Still"
-* "Tilting"
-* "Walking"
-* "Running"
-* "On Stairs"
-
-"""
-self._process_available_packets()
-try:
-activity_classification = self._readings[BnoReportActivityClassifier]
-return activity_classification
-except KeyError:
-raise RuntimeError("No activity classification report found, is it enabled?") from None
-
-@property
-func raw_acceleration(self) -> Optional[tuple[int, int, int]]:
-"""Returns the sensor's raw, unscaled value from the accelerometer registers"""
-self._process_available_packets()
-try:
-raw_acceleration = self._readings[BnoReportRawAccelerometer]
-return raw_acceleration
-except KeyError:
-raise RuntimeError("No raw acceleration report found, is it enabled?") from None
-
-@property
-func raw_gyro(self) -> Optional[tuple[int, int, int]]:
-"""Returns the sensor's raw, unscaled value from the gyro registers"""
-self._process_available_packets()
-try:
-raw_gyro = self._readings[BnoReportRawGyroscope]
-return raw_gyro
-except KeyError:
-raise RuntimeError("No raw gyro report found, is it enabled?") from None
-
-@property
-func raw_magnetic(self) -> Optional[tuple[int, int, int]]:
-"""Returns the sensor's raw, unscaled value from the magnetometer registers"""
-self._process_available_packets()
-try:
-raw_magnetic = self._readings[BnoReportRawMagnetometer]
-return raw_magnetic
-except KeyError:
-raise RuntimeError("No raw magnetic report found, is it enabled?") from None
+// RawMagnetic returns the sensor's raw, unscaled value from the magnetometer registers.
+//
+// Returns:
+//   A pointer to a [3]float64 array containing the raw magnetometer values.
+func (b *BNO08X) RawMagnetic() *[3]float64 {
+	b.processAvailablePackets(nil)
+	return b.rawMagnetometer
+}
 
 func begin_calibration(self) -> None:
 """Begin the sensor's self-calibration routine"""
