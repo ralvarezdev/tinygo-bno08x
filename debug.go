@@ -68,63 +68,51 @@ var (
 
 /*
 const (
-	// BnoReportGravity is used for gravity (m/s2)
-	BnoReportGravity uint8 = 0x06 // 10 bytes
+	// ReportIDRawUncalibratedGyroscope is the report ID for uncalibrated gyroscope (rad/s).
+	ReportIDRawUncalibratedGyroscope uint8 = 0x07 // 16
 
-	// BnoReportRawAccelerometer is used for raw uncalibrated accelerometer data (ADC units). Used for testing
-	BnoReportRawAccelerometer uint8 = 0x14 // 16
-
-	// BnoReportRawUncalibratedGyroscope is used for uncalibrated gyroscope (rad/s).
-	BnoReportRawUncalibratedGyroscope uint8 = 0x07 // 16
-
-	// BnoReportRawGyroscope is used for raw uncalibrated gyroscope (ADC units).
-	BnoReportRawGyroscope uint8 = 0x15 // 16
-
-	// BnoReportUncalibratedMagneticField is used for magnetic field uncalibrated (in µTesla).
+	// ReportIDUncalibratedMagneticField is the report ID for magnetic field uncalibrated (in µTesla).
 	// The magnetic field measurement without hard-iron offset applied, the hard-iron
 	// estimate is provided as a separate parameter.
-	BnoReportUncalibratedMagneticField uint8 = 0x0F
+	ReportIDUncalibratedMagneticField uint8 = 0x0F
 
-	// BnoReportRawMagnetometer is used for raw magnetic field measurement (in ADC units).
-	// Direct data from the magnetometer. Used for testing.
-	BnoReportRawMagnetometer uint8 = 0x16 // 16
+	// ReportIDARVRStabilizedGameRotationVector is the reportID for AR/VR Stabilized Game Rotation vector
+	ReportIDARVRStabilizedGameRotationVector uint8 = 0x29
 
-	// BnoReportGeomagneticRotationVector is used for Geomagnetic Rotation Vector
-	BnoReportGeomagneticRotationVector uint8 = 0x09
+	// ReportIDARVRStabilizedRotationVector is the reportID for AR/VR Stabilized Rotation Vector
+	ReportIDARVRStabilizedRotationVector uint8 = 0x28
 
-	// BnoReportGameRotationVector is used for Game Rotation Vector
-	BnoReportGameRotationVector uint8 = 0x08
+	// ReportIDTapDetector is the report ID for the tap detector
+	ReportIDTapDetector       uint8 = 0x10
 
-	// BnoReportARVRStabilizedGameRotationVector is used for AR/VR Stabilized Game Rotation vector
-	BnoReportARVRStabilizedGameRotationVector uint8 = 0x29
+	// ReportIDSignificantMotion is the report ID for the significant motion sensor
+	ReportIDSignificantMotion uint8 = 0x12
 
-	// BnoReportARVRStabilizedRotationVector is used for AR/VR Stabilized Rotation Vector
-	BnoReportARVRStabilizedRotationVector uint8 = 0x28
+	// ReportIDSar is the report ID for the SAR (Specific Absorption Rate) sensor
+	ReportIDSar               uint8 = 0x17
 
-	// Gyro rotation Vector
-	BnoReportTapDetector uint8 = 0x10
-	BnoReportStepCounter uint8 = 0x11
-	BnoReportSignificantMotion uint8 = 0x12
+	// ReportIDStepDetector is the report ID for the step detector
+	ReportIDStepDetector      uint8 = 0x18
 
-	BnoReportSar uint8 = 0x17
-	BnoReportStepDetector uint8 = 0x18
-	BnoReportShakeDetector uint8 = 0x19
-	BnoReportFlipDetector uint8 = 0x1A
-	BnoReportPickupDetector uint8 = 0x1B
-	BnoReportStabilityDetector uint8 = 0x1C
-	BnoReportSleepDetector uint8 = 0x1F
-	BnoReportTiltDetector uint8 = 0x20
-	BnoReportPocketDetector uint8 = 0x21
-	BnoReportCircleDetector uint8 = 0x22
+	// ReportIDFlipDetector is the report ID for the flip detector
+	ReportIDFlipDetector      uint8 = 0x1A
+
+	// ReportIDPickupDetector is the report ID for the pickup detector
+	ReportIDPickupDetector    uint8 = 0x1B
+
+	// ReportIDStabilityDetector is the report ID for the stability detector
+	ReportIDStabilityDetector uint8 = 0x1C
+
+	// ReportIDSleepDetector is the report ID for the sleep detector
+	ReportIDSleepDetector     uint8 = 0x1F
+
+	// ReportIDTiltDetector is the report ID for the tilt detector
+	ReportIDTiltDetector      uint8 = 0x20
+
+	// ReportIDPocketDetector is the report ID for the pocket detector
+	ReportIDPocketDetector    uint8 = 0x21
+
+	// ReportIDCircleDetector is the report ID for the circle detector
+	ReportIDCircleDetector    uint8 = 0x22
 )
-*/
-
-/*
-Reset reasons from ID Report response:
-0 – Not Applicable
-1 – Power On Reset
-2 – Internal System Reset
-3 – Watchdog Timeout
-4 – External Reset
-5 – Other
 */

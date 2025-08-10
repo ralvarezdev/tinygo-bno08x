@@ -101,7 +101,7 @@ func newPacket(packetBytes *[]byte) (*packet, error) {
 
 	return &packet{
 		Header: header,
-		Data:   (*packetBytes)[BnoHeaderLen : BnoHeaderLen+header.DataLength],
+		Data:   (*packetBytes)[PacketHeaderLength : PacketHeaderLength+header.DataLength],
 	}, nil
 }
 
@@ -152,8 +152,8 @@ func (p *packet) String() *string {
 	)
 
 	channelNumbers := []uint8{
-		BnoChannelCONTROL,
-		BnoChannelInputSensorReports,
+		ChannelCONTROL,
+		ChannelInputSensorReports,
 	}
 	for _, channelNumber := range channelNumbers {
 		if p.Header.ChannelNumber != channelNumber {

@@ -19,17 +19,17 @@ func elapsedTime(startTime time.Time) time.Duration {
 	return time.Now().Sub(startTime)
 }
 
-// separateBatch takes a packet and separates it into individual reports, appending them to the provided reportSlices.
+// separateBatch takes a packet and separates it into individual reports, appending them to the provided reports.
 //
 // Parameters:
 //
 //	packet: The packet to separate into reports.
-//	reportSlices: A pointer to a slice of slices where the separated reports will be appended.
+//	reports: A pointer to a slice of slices where the separated reports will be appended.
 //
 // Returns:
 //
 // An error if the packet cannot be processed due to insufficient bytes or other issues.
-func separateBatch(packet *packet, reportSlices *[]*report) error {
+func separateBatch(packet *packet, reports *[]*report) error {
 	// Check if the packet is nil
 	if packet == nil {
 		return ErrNilPacket
@@ -52,8 +52,8 @@ func separateBatch(packet *packet, reportSlices *[]*report) error {
 			)
 		}
 
-		reportSlice := packet.Data[nextByteIndex : nextByteIndex+requiredBytes]
-		report, err := newReport(reportID, &reportSlice)
+		reportBytes := packet.Data[nextByteIndex : nextByteIndex+requiredBytes]
+		report, err := newReport(reportID, &reportBytes)
 		if err != nil {
 			return fmt.Errorf(
 				"failed to create report from bytes: %w",
@@ -61,9 +61,9 @@ func separateBatch(packet *packet, reportSlices *[]*report) error {
 			)
 		}
 
-		// Append the new report to the reportSlices
-		*reportSlices = append(
-			*reportSlices,
+		// Append the new report to the reports
+		*reports = append(
+			*reports,
 			report,
 		)
 		nextByteIndex += requiredBytes

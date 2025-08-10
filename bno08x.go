@@ -14,6 +14,16 @@ SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
 SPDX-License-Identifier: MIT
 */
 
+/*
+Reset reasons from ID Report response:
+0 – Not Applicable
+1 – Power On Reset
+2 – Internal System Reset
+3 – Watchdog Timeout
+4 – External Reset
+5 – Other
+*/
+
 type (
 	// PacketReader is an interface for reading packets from the BNO08x sensor
 	PacketReader interface {
@@ -44,7 +54,22 @@ type (
 		waitForInitialize       bool
 		initComplete            bool
 		idRead                  bool
-		readings                map[uint8]interface{}
+		accelerometer *[3]float64
+		gravity *[3]float64
+		gyroscope *[3]float64
+		magnetometer *[3]float64
+		linearAcceleration *[3]float64
+		rotationVector *[4]float64
+		geomagneticRotationVector *[4]float64
+		gameRotationVector *[4]float64
+		stepCount *uint16
+		shakesDetected *bool
+		stabilityClassification *string
+		mostLikelyClassification *string
+		classifications *map[string]int
+		rawAccelerometer *[3]float64
+		rawGyroscope *[3]float64
+		rawMagnetometer *[3]float64
 	}
 
 	// Options struct holds configuration options for the BNO08X instance
@@ -75,7 +100,7 @@ func NewBNO08X(packetReader PacketReader, packetWriter PacketWriter, options *Op
 		reset:                   options.Reset,
 		dataBuffer:              make([]byte, DataBufferSize),
 		commandBuffer:           make([]byte, CommandBufferSize),
-		packetSlices:            make([][]interface{}, 0),
+		packetSlices:            make([]*report, 0),
 		sequenceNumber:          make([]int, 6), // Assuming 6 channels
 		twoEndedSequenceNumbers: make(map[int]int),
 		dcdSavedAt:              -1.0,
@@ -85,7 +110,22 @@ func NewBNO08X(packetReader PacketReader, packetWriter PacketWriter, options *Op
 		waitForInitialize:       true,
 		initComplete:            false,
 		idRead:                  false,
-		readings:                make(map[uint8]interface{}),
+		accelerometer: &InitialBnoSensorReportThreeDimensional,
+		gravity: &InitialBnoSensorReportThreeDimensional,
+		gyroscope: &InitialBnoSensorReportThreeDimensional,
+		magnetometer: &InitialBnoSensorReportThreeDimensional,
+		linearAcceleration: &InitialBnoSensorReportThreeDimensional,
+		rotationVector: &InitialBnoSensorReportFourDimensional,
+		geomagneticRotationVector: &InitialBnoSensorReportFourDimensional,
+		gameRotationVector: &InitialBnoSensorReportFourDimensional,
+		stepCount: &InitialBnoStepCount,
+		shakesDetected: &InitialBnoShakeDetected,
+		stabilityClassification: &InitialBnoStabilityClassification,
+		mostLikelyClassification: &InitialBnoMostLikelyClassification,
+		classifications: &InitialBnoClassifications,
+		rawAccelerometer: &InitialBnoSensorReportThreeDimensional,
+		rawGyroscope: &InitialBnoSensorReportThreeDimensional,
+		rawMagnetometer: &InitialBnoSensorReportThreeDimensional,
 	}
 	bno08x.debug("********** NewBNO08X *************")
 
@@ -98,7 +138,7 @@ func NewBNO08X(packetReader PacketReader, packetWriter PacketWriter, options *Op
 // Parameters:
 //
 //	args: The arguments to print in the debug message
-func (b *BNO08X) debug(args ...interface{}) {
+func (b *BNO08X) debug(args ...any) {
 	if b.debugFlag {
 		fmt.Print("DBG::\t\t")
 		fmt.Print( args...)
@@ -133,13 +173,13 @@ func (b *BNO08X) softwareReset() error {
 	b.debug("Software resetting...")
 	data := []byte{1}
 
-	if _, err :=b.packetWriter.SendPacket(BnoChannelExe, data); err != nil {
+	if _, err :=b.packetWriter.SendPacket(ChannelExe, data); err != nil {
 		b.debug("Error sending software reset packet:", err)
 		return err
 	}
 	time.Sleep(500 * time.Millisecond)
 
-	if _, err := b.packetWriter.SendPacket(BnoChannelExe, data); err != nil {
+	if _, err := b.packetWriter.SendPacket(ChannelExe, data); err != nil {
 		b.debug("Error sending second software reset packet:", err)
 		return err
 	}
@@ -197,19 +237,19 @@ func (b *BNO08X) checkID() (bool, error) {
 		return true, nil
 	}
 	data := make([]byte, 2)
-	data[0] = SHTPReportProductIDRequestID
+	data[0] = ReportIDSHTPReportProductIDRequest
 	data[1] = 0 // padding
 
 	// Send the ID request report
 	b.debug("\n** Sending ID Request Report **")
-	if _, err := b.packetWriter.SendPacket(BnoChannelCONTROL, data); err != nil {
+	if _, err := b.packetWriter.SendPacket(ChannelCONTROL, data); err != nil {
 		b.debug("Error sending ID request packet:", err)
 		return false, err
 	}
 	b.debug("\n** Waiting for packet **")
 	for {
-		reportID := SHTPReportProductIDResponseID
-		_, err := b.waitForPacketType(BnoChannelCONTROL, &reportID, nil)
+		reportID := ReportIDSHTPReportProductIDResponse
+		_, err := b.waitForPacketType(ChannelCONTROL, &reportID, nil)
 		if err != nil {
 			b.debug("Error waiting for ID response packet:", err)
 			return false, err
@@ -236,7 +276,7 @@ func (b *BNO08X) checkID() (bool, error) {
 //
 // The sensor ID as an integer, or an error if the data buffer is too short or the report ID is incorrect.
 func (b *BNO08X) parseSensorID() (int, error) {
-	if b.dataBuffer[4] != SHTPReportProductIDResponseID {
+	if b.dataBuffer[4] != ReportIDSHTPReportProductIDResponse {
 		return 0, nil
 	}
 
@@ -333,7 +373,7 @@ func (b *BNO08X) waitForPacketType(channelNumber uint8, reportID *uint8, timeout
 				return newPacket, nil
 			}
 		}
-		if newPacket.ChannelNumber() != BnoChannelExe && newPacket.ChannelNumber() != BnoChannelSHTPCommand {
+		if newPacket.ChannelNumber() != ChannelExe && newPacket.ChannelNumber() != ChannelSHTPCommand {
 			b.debug("passing packet to handler for de-slicing")
 			if err := b.handlePacket(newPacket); err != nil {
 				return nil, err
@@ -370,6 +410,15 @@ func (b *BNO08X) waitForPacket(timeout time.Duration) (*packet, error) {
 	return nil, ErrPacketTimeout
 }
 
+// handlePacket processes a packet by separating it into individual reports and processing each report.
+//
+// Parameters:
+//
+//  packet: A pointer to the packet to be processed.
+//
+// Returns:
+//
+//  An error if the packet cannot be processed, otherwise nil.
 func (b *BNO08X) handlePacket(packet *packet) error {
 	// Split out reports first
 	if err := separateBatch(packet, &b.packetSlices); err != nil {
@@ -384,7 +433,7 @@ func (b *BNO08X) handlePacket(packet *packet) error {
 		b.packetSlices = b.packetSlices[:len(b.packetSlices)-1]
 
 		// Process the report
-		if err := b.processReport(lastReport.ID, lastReport.Data); err != nil {
+		if err := b.processReport(lastReport); err != nil {
 			b.debug("Error processing report:", err)
 			return err
 		}
@@ -392,15 +441,29 @@ func (b *BNO08X) handlePacket(packet *packet) error {
 	return nil
 }
 
-func (b *BNO08X) processReport(reportID uint8, reportBytes []byte) error {
-	if reportID >= 0xF0 {
-		return b.handleControlReport(reportID, reportBytes)
+// processReport processes a report by checking if it is a control report or a sensor report, and then parsing the data accordingly.
+//
+// Parameters:
+//
+//  report: A pointer to the report to be processed.
+//
+// Returns:
+//
+//  An error if the report cannot be processed, otherwise nil.
+func (b *BNO08X) processReport(report *report) error {
+	// Check if the report is nil
+	if report == nil {
+		return ErrNilReport
 	}
 
-	b.debug("\tProcessing report:", Reports[reportID])
+	if isControlReport(report.ID) {
+		return b.handleControlReport(report)
+	}
+
+	b.debug("\tProcessing report:", Reports[report.ID])
 	if b.debugFlag {
 		outputStr := ""
-		for idx, packetByte := range reportBytes {
+		for idx, packetByte := range report.Data {
 			packetIndex := idx
 			if (packetIndex % 4) == 0 {
 				outputStr += fmt.Sprintf("\nDBG::\t\t[0x%02X] ", packetIndex)
@@ -410,68 +473,104 @@ func (b *BNO08X) processReport(reportID uint8, reportBytes []byte) error {
 		b.debug(outputStr)
 	}
 
-	switch reportID {
-	case BnoReportStepCounter:
+	switch report.ID {
+	case ReportIDStepCounter:
 		// Parse the step counter report
-		stepCounterReport, err := newStepCounterReport(&reportBytes)
+		stepCounterReport, err := newStepCounterReport(report)
 		if err != nil {
 			return fmt.Errorf("failed to parse step counter report: %w", err)
 		}
 
-		// Update the readings map with the step count
-		b.readings[BnoReportStepCounter] = stepCounterReport.Count
+		// Update the step count in the BNO08X instance
+		b.stepCount = &stepCounterReport.Count
 		return nil
-	case BnoReportShakeDetector:
+	case ReportIDShakeDetector:
 		// Parse the shake detector report
-		shakeReport, err := newShakeReport(&reportBytes)
+		shakeReport, err := newShakeReport(report)
 		if err != nil {
 			return fmt.Errorf("failed to parse shake report: %w", err)
 		}
 
-		// Update the readings map with the shake detection status
-		b.readings[BnoReportShakeDetector] = shakeReport.AreShakesDetected
+		// Update the shake detection status in the BNO08X instance
+		b.shakesDetected = &shakeReport.AreShakesDetected
 		return nil
-	case BnoReportStabilityClassifier:
+	case ReportIDStabilityClassifier:
 		// Parse the stability classifier report
-		stabilityReport, err := newStabilityClassifierReport(&reportBytes)
+		stabilityReport, err := newStabilityClassifierReport(report)
 		if err != nil {
 			return fmt.Errorf("failed to parse stability classifier report: %w", err)
 		}
 
-		// Update the readings map with the stability classification
-		b.readings[BnoReportStabilityClassifier] = stabilityReport.StabilityClassifcation
+		// Update the stability classification in the BNO08X instance
+		b.stabilityClassification = &stabilityReport.StabilityClassification
 		return nil
-	case BnoReportActivityClassifier:
+	case ReportIDActivityClassifier:
 		// Parse the activity classifier report
-		activityReport, err := newActivityClassifierReport(&reportBytes)
+		activityReport, err := newActivityClassifierReport(report)
 		if err != nil {
 			return fmt.Errorf("failed to parse activity classifier report: %w", err)
 		}
 
-		// Update the readings map with the activity classifications
-		b.readings[BnoReportActivityClassifier] = activityReport.Classifications
+		// Update the activity classification and classifications in the BNO08X instance
+		b.classifications = &activityReport.Classifications
 		return nil
-	default:
-		// Parse the sensor report data
-		sensorReport, err := newSensorReportData(&reportBytes)
+	case ReportIDMagnetometer:
+		// Parse the magnetometer report
+		magnetometerReport, err := newThreeDimensionalReport(report)
 		if err != nil {
-			return fmt.Errorf("failed to parse sensor report data: %w", err)
+			return fmt.Errorf("failed to parse magnetometer report: %w", err)
 		}
 
-		// Check if the report ID is for the magnetometer and update its accuracy
-		if reportID == BnoReportMagnetometer {
-			b.magnetometerAccuracy = sensorReport.Accuracy
+		// Update the magnetometer readings in the BNO08X instance
+		b.magnetometerAccuracy = magnetometerReport.Accuracy
+		b.magnetometer = &magnetometerReport.Results
+	case ReportIDRotationVector:
+		// Parse the rotation vector report
+		rotationReport, err := newFourDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse rotation vector report: %w", err)
 		}
-		b.readings[reportID] = sensorReport.Results
-		return nil
+
+		// Update the rotation vector readings in the BNO08X instance
+		b.rotationVector = &rotationReport.Results
+	case ReportIDGeomagneticRotationVector:
+		// Parse the geomagnetic rotation vector report
+		geomagneticReport, err := newFourDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse geomagnetic rotation vector report: %w", err)
+		}
+
+		// Update the geomagnetic rotation vector readings in the BNO08X instance
+		b.geomagneticRotationVector = &geomagneticReport.Results
+	case ReportIDGameRotationVector:
+		// Parse the game rotation vector report
+		gameReport, err := newFourDimensionalReport(report)
+		if err != nil {
+			return fmt.Errorf("failed to parse game rotation vector report: %w", err)
+		}
+
+		// Update the game rotation vector readings in the BNO08X instance
+		b.gameRotationVector = &gameReport.Results
 	}
+
+	// If we reach here, the report was processed successfully
+	return nil
 }
 
-func (b *BNO08X) handleControlReport(reportID uint8, reportBytes []byte) error {
-	switch reportID {
-	case SHTPReportProductIDResponseID:
+// handleControlReport processes control reports and updates the BNO08X state accordingly.
+//
+// Parameters:
+//
+//  report: A pointer to the report containing control data.
+//
+// Returns:
+//
+//  An error if the control report cannot be processed, otherwise nil.
+func (b *BNO08X) handleControlReport(report *report) error {
+	switch report.ID {
+	case ReportIDSHTPReportProductIDResponse:
 		// Parse the sensor ID from the report bytes
-		sensorID, err := newSensorID(&reportBytes)
+		sensorID, err := newSensorID(report)
 		if err != nil {
 			return fmt.Errorf("failed to parse sensor ID: %w", err)
 		}
@@ -485,64 +584,120 @@ func (b *BNO08X) handleControlReport(reportID uint8, reportBytes []byte) error {
 			),
 		)
 		b.debug(fmt.Sprintf("\tBuild: %d", sensorID.SoftwareBuildNumber))
-	case GetFeatureCommandID:
+	case ReportIDGetFeatureResponse:
 		// Parse the Get Feature report from the report bytes
-		getFeatureReport, err := newGetFeatureResponseReport(&reportBytes)
+		_, err := newGetFeatureReport(report)
 		if err != nil {
 			return fmt.Errorf("failed to parse get feature report: %w", err)
 		}
 
 		// Check if the feature report ID is in the InitialReports map
-		featureReportID := getFeatureReport.ReportID
-		if val, ok := InitialReports[featureReportID]; ok {
-			b.readings[featureReportID] = val
-		} else {
-			b.readings[featureReportID] = [3]float64{0.0, 0.0, 0.0}
-		}
-	case CommandResponseID:
-		return b.handleCommandResponse(reportBytes)
+		// featureReportID := getFeatureReport.ReportID
+	case ReportIDCommandResponse:
+		return b.handleCommandResponse(report)
 	}
 	return nil
 }
 
-@property
-func magnetic(self) -> Optional[tuple[float, float, float]]:
-"""A tuple of the current magnetic field measurements on the X, Y, and Z axes"""
-self._process_available_packets() // decorator?
-try:
-return self._readings[BnoReportMagnetometer]
-except KeyError:
-raise RuntimeError("No magfield report found, is it enabled?") from None
+// handleCommandResponse processes the command response report and updates the BNO08X state accordingly.
+//
+// Parameters:
+//
+//  report: A pointer to the report containing command response data.
+//
+// Returns:
+//
+//  An error if the command response cannot be processed, otherwise nil.
+func (b *BNO08X) handleCommandResponse(report *report) error {
+	commandResponse, err := newCommandResponse(report)
+	if err != nil {
+		return err
+	}
 
-@property
-func quaternion(self) -> Optional[tuple[float, float, float, float]]:
-"""A quaternion representing the current rotation vector"""
-self._process_available_packets()
-try:
-return self._readings[BnoReportRotationVector]
-except KeyError:
-raise RuntimeError("No quaternion report found, is it enabled?") from None
+	// Get the command and its status from the command response
+	command := commandResponse.Command
+	commandStatus := commandResponse.Status()
 
-@property
-func geomagnetic_quaternion(self) -> Optional[tuple[float, float, float, float]]:
-"""A quaternion representing the current geomagnetic rotation vector"""
-self._process_available_packets()
-try:
-return self._readings[BnoReportGeomagneticRotationVector]
-except KeyError:
-raise RuntimeError("No geomag quaternion report found, is it enabled?") from None
+	if command == MECalibrate && commandStatus == 0 {
+		b.meCalibrationStartedAt = float64(time.Now().UnixNano()) / 1e9
+	}
 
-@property
-func game_quaternion(self) -> Optional[tuple[float, float, float, float]]:
-"""A quaternion representing the current rotation vector expressed as a quaternion with no
-specific reference for heading, while roll and pitch are referenced against gravity.To
-prevent sudden jumps in heading due to corrections, the `game_quaternion` property is not
-corrected using the magnetometer.Some drift is expected"""
-self._process_available_packets()
-try:
-return self._readings[BnoReportGameRotationVector]
-except KeyError:
-raise RuntimeError("No game quaternion report found, is it enabled?") from None
+	if command == SaveDCD {
+		if commandStatus == 0 {
+			b.dcdSavedAt = float64(time.Now().UnixNano()) / 1e9
+		} else {
+			return ErrFailedToSaveCalibrationData
+		}
+	}
+	return nil
+}
+
+// processAvailablePackets processes all available packets from the packet reader, handling each packet until the maximum number of packets is reached.
+//
+// Parameters:
+//
+//  maxPackets: An optional pointer to an integer specifying the maximum number of packets to process. If nil, all available packets will be processed.
+func (b *BNO08X) processAvailablePackets(maxPackets *int) {
+	processedCount := 0
+	for b.packetReader.IsDataReady() {
+		if maxPackets != nil && processedCount >= *maxPackets {
+			return
+		}
+		newPacket, err := b.packetReader.ReadPacket()
+		if err != nil {
+			continue
+		}
+		if err := b.handlePacket(newPacket); err != nil {
+			b.debug("Error handling packet:", err)
+			continue
+		}
+		processedCount++
+	}
+}
+
+// Magnetic returns the current magnetic field measurements on the X, Y, and Z axes.
+//
+// Returns:
+//
+// A pointer to a [3]float64 array containing the magnetic field values.
+func (b *BNO08X) Magnetic() *[3]float64 {
+	// Process available packets to ensure readings are up-to-date
+	b.processAvailablePackets(nil)
+	return b.magnetometer
+}
+
+// Quaternion returns a pointer to a [4]float64 array representing the current rotation vector as a quaternion.
+//
+// Returns:
+//
+// A pointer to a [4]float64 array containing the quaternion values.
+func (b *BNO08X) Quaternion() *[4]float64 {
+	// Process available packets to ensure readings are up-to-date
+	b.processAvailablePackets(nil)
+	return b.rotationVector
+}
+
+// GeomagneticQuaternion returns a pointer to a [4]float64 array representing the current geomagnetic rotation vector as a quaternion.
+//
+// Returns:
+//
+// A pointer to a [4]float64 array containing the geomagnetic quaternion values.
+func (b *BNO08X) GeomagneticQuaternion() *[4]float64 {
+	// Process available packets to ensure readings are up-to-date
+	b.processAvailablePackets(nil)
+	return b.geomagneticRotationVector
+}
+
+// GameQuaternion returns a pointer to a [4]float64 array representing the current rotation vector expressed as a quaternion with no specific reference for heading.
+//
+// Returns:
+//
+// A pointer to a [4]float64 array containing the game quaternion values.
+func (b *BNO08X) GameQuaternion() *[4]float64 {
+	// Process available packets to ensure readings are up-to-date
+	b.processAvailablePackets(nil)
+	return b.gameRotationVector
+}
 
 @property
 func steps(self) -> Optional[int]:
@@ -784,43 +939,6 @@ func _update_sequence_number(self, new_packet: Packet) -> None:
 channel = new_packet.channel_number
 seq = new_packet.header.sequence_number
 self._sequence_number[channel] = seq
-
-func _handle_command_response(self, report_bytes: bytearray) -> None:
-(report_body, response_values) = _parse_command_response(report_bytes)
-
-(
-_report_id,
-_seq_number,
-command,
-_command_seq_number,
-_response_seq_number,
-) = report_body
-
-// status, accel_en, gyro_en, mag_en, planar_en, table_en, *_reserved) = response_values
-command_status, *_rest = response_values
-
-if command == MECalibrate and command_status == 0:
-self._me_calibration_started_at = time.monotonic()
-
-if command == SaveDCD:
-if command_status == 0:
-self._dcd_saved_at = time.monotonic() else:
-raise RuntimeError("Unable to save calibration data")
-
-// TODO: Make this a packet creation
-@staticmethod
-func _get_feature_enable_report(
-	feature_id: int,
-	report_interval: int = DefaultReportInterval,
-	sensor_specific_config: int = 0,
-) -> bytearray:
-set_feature_report = bytearray(17)
-set_feature_report[0] = SetFeatureCommand
-set_feature_report[1] = feature_id
-pack_into("<I", set_feature_report, 5, report_interval)
-pack_into("<I", set_feature_report, 13, sensor_specific_config)
-
-return set_feature_report
 
 // TODO: add docs for available features
 // TODO2: I think this should call an fn that imports all the bits for the given feature

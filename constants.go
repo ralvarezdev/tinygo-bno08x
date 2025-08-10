@@ -5,84 +5,148 @@ import (
 )
 
 const (
-	// Channel 0: the SHTP command channel
-	BnoChannelSHTPCommand            uint8 = 0
-	BnoChannelExe                    uint8 = 1
-	BnoChannelCONTROL                uint8 = 2
-	BnoChannelInputSensorReports     uint8 = 3
-	BnoChannelWakeInputSensorReports uint8 = 4
-	BnoChannelGyroRotationVector     uint8 = 5
+	// ChannelSHTPCommand is the channel for SHTP commands
+	ChannelSHTPCommand uint8 = 0
 
-	GetFeatureRequestID uint8 = 0xFE
-	SetFeatureCommandID uint8 = 0xFD
-	GetFeatureCommandID uint8 = 0xFC
-	BaseTimestamp       uint8 = 0xFB
+	// ChannelExe is the channel for execution commands
+	ChannelExe uint8 = 1
 
-	TimestampRebase uint8 = 0xFA
+	// ChannelCONTROL is the channel for control commands
+	ChannelCONTROL uint8 = 2
 
-	SHTPReportProductIDResponseID uint8 = 0xF8
-	SHTPReportProductIDRequestID  uint8 = 0xF9
+	// ChannelInputSensorReports is the channel for input sensor reports
+	ChannelInputSensorReports uint8 = 3
 
-	FRSWriteRequestID  uint8 = 0xF7
-	FRSWriteDataID     uint8 = 0xF6
-	FRSWriteResponseID uint8 = 0xF5
+	// ChannelWakeInputSensorReports is the channel for wake input sensor reports
+	ChannelWakeInputSensorReports uint8 = 4
 
-	FRSReadRequestID  uint8 = 0xF4
-	FRSReadResponseID uint8 = 0xF3
+	// ChannelGyroRotationVector is the channel for the gyroscope rotation vector
+	ChannelGyroRotationVector uint8 = 5
 
-	CommandRequestID  uint8 = 0xF2
-	CommandResponseID uint8 = 0xF1
+	// ReportIDGetFeatureRequest is the report ID for the Get Feature request.
+	ReportIDGetFeatureRequest uint8 = 0xFE
 
-	// DCD/ ME Calibration commands and sub-commands
-	SaveDCD             uint8 = 0x6
-	MECalibrate         uint8 = 0x7
+	// ReportIDSetFeatureCommand is the command ID for setting a feature.
+	ReportIDSetFeatureCommand uint8 = 0xFD
+
+	// ReportIDGetFeatureResponse is the report ID for the Get Feature request.
+	ReportIDGetFeatureResponse uint8 = 0xFC
+
+	// ReportIDBaseTimestamp is the report ID for the base timestamp.
+	ReportIDBaseTimestamp uint8 = 0xFB
+
+	// ReportIDTimestampRebase is the report ID for the timestamp rebase.
+	ReportIDTimestampRebase uint8 = 0xFA
+
+	// ReportIDSHTPReportProductIDResponse is the report ID for the SHTP report product ID response.
+	ReportIDSHTPReportProductIDResponse uint8 = 0xF8
+
+	// ReportIDSHTPReportProductIDRequest is the report ID for the SHTP report product ID request.
+	ReportIDSHTPReportProductIDRequest uint8 = 0xF9
+
+	// ReportIDFRSWriteRequest is the report ID for the FRS (Feature Request Service) write request.
+	ReportIDFRSWriteRequest uint8 = 0xF7
+
+	// ReportIDFRSWriteData is the report ID for the FRS write data.
+	ReportIDFRSWriteData uint8 = 0xF6
+
+	// ReportIDFRSWriteResponse is the report ID for the FRS write response.
+	ReportIDFRSWriteResponse uint8 = 0xF5
+
+	// ReportIDFRSReadRequest is the report ID for the FRS read request.
+	ReportIDFRSReadRequest uint8 = 0xF4
+
+	// ReportIDFRSReadResponse is the report ID for the FRS read response.
+	ReportIDFRSReadResponse uint8 = 0xF3
+
+	// ReportIDCommandRequest is the report ID for command requests
+	ReportIDCommandRequest uint8 = 0xF2
+
+	// ReportIDCommandResponse is the report ID for command responses
+	ReportIDCommandResponse uint8 = 0xF1
+
+	// SaveDCD is the command to save the DCD (Device Configuration Data)
+	SaveDCD uint8 = 0x6
+
+	// MECalibrate is the command to calibrate the sensor
+	MECalibrate uint8 = 0x7
+
+	// MECalibrationConfig is the command to configure the calibration settings
 	MECalibrationConfig uint8 = 0x00
-	MEGetCalibration    uint8 = 0x01
 
-	// BnoReportAccelerometer is for calibrated Acceleration (m/s2)
-	BnoReportAccelerometer uint8 = 0x01
+	// MEGetCalibration is the command to get the calibration data
+	MEGetCalibration uint8 = 0x01
 
-	// BnoReportGyroscope is for calibrated gyroscope (rad/s).
-	BnoReportGyroscope uint8 = 0x02
+	// ReportIDAccelerometer is the report ID for calibrated acceleration (m/s2)
+	ReportIDAccelerometer uint8 = 0x01
 
-	// BnoReportMagnetometer is for magnetic field calibrated (in µTesla). The fully calibrated magnetic field measurement.
-	BnoReportMagnetometer uint8 = 0x03
+	// ReportIDGyroscope is the report ID for calibrated gyroscope (rad/s).
+	ReportIDGyroscope uint8 = 0x02
 
-	// BnoReportLinearAcceleration is for linear acceleration (m/s2). Acceleration of the device with gravity removed
-	BnoReportLinearAcceleration uint8 = 0x04
+	// ReportIDMagnetometer is the report ID for magnetic field calibrated (in µTesla). The fully calibrated magnetic field measurement
+	ReportIDMagnetometer uint8 = 0x03
 
-	// BnoReportRotationVector is for rotation Vector
-	BnoReportRotationVector uint8 = 0x05
+	// ReportIDLinearAcceleration is the report ID for linear acceleration (m/s2). Acceleration of the device with gravity removed
+	ReportIDLinearAcceleration uint8 = 0x04
 
-	// BnoReportGravity is for gravity Vector (m/s2). Vector direction of gravity
-	BnoReportGravity uint8 = 0x06
+	// ReportIDRotationVector is the report ID for rotation vector
+	ReportIDRotationVector uint8 = 0x05
 
-	// BnoReportGameRotationVector is for Game Rotation Vector
-	BnoReportGameRotationVector uint8 = 0x08
+	// ReportIDGravity is the report ID for gravity vector (m/s2). Vector direction of gravity
+	ReportIDGravity uint8 = 0x06
 
-	BnoReportGeomagneticRotationVector uint8 = 0x09
+	// ReportIDGameRotationVector is the report ID for game rotation vector
+	ReportIDGameRotationVector uint8 = 0x08
 
-	BnoReportStepCounter uint8 = 0x11
+	// ReportIDGeomagneticRotationVector is the report ID for geomagnetic rotation vector
+	ReportIDGeomagneticRotationVector uint8 = 0x09
 
-	BnoReportRawAccelerometer uint8 = 0x14
-	BnoReportRawGyroscope     uint8 = 0x15
-	BnoReportRawMagnetometer  uint8 = 0x16
-	BnoReportShakeDetector    uint8 = 0x19
+	// ReportIDStepCounter is the report ID for the step counter.
+	ReportIDStepCounter uint8 = 0x11
 
-	BnoReportStabilityClassifier               uint8 = 0x13
-	BnoReportActivityClassifier                uint8 = 0x1E
-	BnoReportGyroscopeIntegratedRotationVector uint8 = 0x2A
+	// ReportIDStabilityClassifier is the report ID for the stability classifier.
+	ReportIDStabilityClassifier uint8 = 0x13
 
-	DefaultReportInterval float32 = 50000 // in microseconds = 50ms
-	QuaternionReadTimeout float32 = 0.500 // timeout in seconds
-	PacketReadTimeout     float32 = 2.000 // timeout in seconds
-	FeatureEnableTimeout  float32 = 2.0
-	DefaultTimeout        float32 = 2.0
-	Bno08xCmdReset        uint8   = 0x01
-	QuaternionQPoint      int     = 14
-	BnoHeaderLen          int     = 4
+	// ReportIDRawAccelerometer is the report ID for the raw uncalibrated accelerometer data (ADC units). Used for testing
+	ReportIDRawAccelerometer uint8 = 0x14
 
-	// All activities; 1 bit set for each of 8 activities, + Unknown
+	// ReportIDRawGyroscope is the report ID for the raw uncalibrated gyroscope data (ADC units).
+	ReportIDRawGyroscope uint8 = 0x15
+
+	// ReportIDRawMagnetometer is the report ID for the raw magnetic field measurement (ADC units). Direct data from the magnetometer. Used for testing
+	ReportIDRawMagnetometer uint8 = 0x16
+
+	// ReportIDShakeDetector is the report ID for the shake detector.
+	ReportIDShakeDetector uint8 = 0x19
+
+	// ReportIDActivityClassifier is the report ID for the activity classifier.
+	ReportIDActivityClassifier uint8 = 0x1E
+
+	// ReportIDGyroscopeIntegratedRotationVector is the report ID for the gyroscope integrated rotation vector.
+	ReportIDGyroscopeIntegratedRotationVector uint8 = 0x2A
+
+	// DefaultReportInterval is the default report interval in microseconds
+	DefaultReportInterval float32 = 50000
+
+	// QuaternionReadTimeout is the timeout for reading quaternion data in seconds
+	QuaternionReadTimeout float32 = 0.500
+
+	// PacketReadTimeout is the timeout for reading packets in seconds
+	PacketReadTimeout float32 = 2.000
+
+	// FeatureEnableTimeout is the timeout for enabling features in seconds
+	FeatureEnableTimeout float32 = 2.0
+
+	// DefaultTimeout is the default timeout for operations in seconds
+	DefaultTimeout float32 = 2.0
+
+	// CommandReset is the command to reset the BNO08x sensor
+	CommandReset uint8 = 0x01
+
+	// PacketHeaderLength is the length of the packet header in bytes
+	PacketHeaderLength int = 4
+
+	// EnabledActivities is a bitmask for enabled activities. All activities; 1 bit set for each of 8 activities, + Unknown
 	EnabledActivities uint = 0x1FF
 
 	// DataBufferSize is the size of the data buffer used for reading and writing
@@ -93,95 +157,191 @@ const (
 )
 
 var (
-	QuaternionScalar            = int(math.Pow(2, 14*-1))
-	GeomagneticQuaternionScalar = int(math.Pow(2, 12*-1))
-	GyroscopeScalar             = int(math.Pow(2, 9*-1))
-	AccelerometerScalar         = int(math.Pow(2, 8*-1))
-	MagneticScalar              = int(math.Pow(2, 4*-1))
+	// QuaternionScalar is the scalar for quaternion values
+	QuaternionScalar = math.Pow(2, 14*-1)
 
+	// GeomagneticQuaternionScalar is the scalar for geomagnetic quaternion values
+	GeomagneticQuaternionScalar = math.Pow(2, 12*-1)
+
+	// GyroscopeScalar is the scalar for gyroscope values
+	GyroscopeScalar = math.Pow(2, 9*-1)
+
+	// AccelerometerScalar is the scalar for accelerometer values
+	AccelerometerScalar = math.Pow(2, 8*-1)
+
+	// MagneticScalar is the scalar for magnetic field values
+	MagneticScalar = math.Pow(2, 4*-1)
+
+	// ReportLengths is a map of report IDs to their lengths
 	ReportLengths = map[uint8]int{
-		SHTPReportProductIDResponseID: 16,
-		GetFeatureCommandID:           17,
-		CommandResponseID:             16,
-		BaseTimestamp:                 5,
-		TimestampRebase:               5,
+		ReportIDSHTPReportProductIDResponse: 16,
+		ReportIDGetFeatureResponse:          17,
+		ReportIDCommandResponse:             16,
+		ReportIDBaseTimestamp:               5,
+		ReportIDTimestampRebase:             5,
 	}
 
 	// RawReports are the raw Reports require their counterpart to be enabled
 	RawReports = map[uint8]uint8{
-		BnoReportRawAccelerometer: BnoReportAccelerometer,
-		BnoReportRawGyroscope:     BnoReportGyroscope,
-		BnoReportRawMagnetometer:  BnoReportMagnetometer,
+		ReportIDRawAccelerometer: ReportIDAccelerometer,
+		ReportIDRawGyroscope:     ReportIDGyroscope,
+		ReportIDRawMagnetometer:  ReportIDMagnetometer,
 	}
 
+	// SensorReportAccelerometer is the sensor report for the accelerometer
+	SensorReportAccelerometer = &sensorReport{
+		AccelerometerScalar,
+		3,
+		10,
+	}
+
+	// SensorReportGravity is the sensor report for the gravity vector
+	SensorReportGravity = &sensorReport{
+		AccelerometerScalar,
+		3,
+		10,
+	}
+
+	// SensorReportGyroscope is the sensor report for the gyroscope
+	SensorReportGyroscope = &sensorReport{
+		GyroscopeScalar,
+		3,
+		10,
+	}
+
+	// SensorReportMagnetometer is the sensor report for the magnetometer
+	SensorReportMagnetometer = &sensorReport{
+		MagneticScalar,
+		3,
+		10,
+	}
+
+	// SensorReportLinearAcceleration is the sensor report for the linear acceleration
+	SensorReportLinearAcceleration = &sensorReport{
+		AccelerometerScalar,
+		3,
+		10,
+	}
+
+	// SensorReportRawAccelerometer is the sensor report for the raw accelerometer
+	SensorReportRawAccelerometer = &sensorReport{
+		1,
+		3,
+		16,
+	}
+
+	// SensorReportRawGyroscope is the sensor report for the raw gyroscope
+	SensorReportRawGyroscope = &sensorReport{
+		1,
+		3,
+		16,
+	}
+
+	// SensorReportRawMagnetometer is the sensor report for the raw magnetometer
+	SensorReportRawMagnetometer = &sensorReport{
+		1,
+		3,
+		16,
+	}
+
+	// InitialBnoSensorReportThreeDimensional is the initial state of the BNO sensor report for 3D data
+	InitialBnoSensorReportThreeDimensional = [3]float64{0.0, 0.0, 0.0}
+
+	// SensorReportRotationVector is the sensor report for the rotation vector
+	SensorReportRotationVector = &sensorReport{
+		QuaternionScalar,
+		4,
+		14,
+	}
+
+	// SensorReportGeomagneticRotationVector is the sensor report for the geomagnetic rotation vector
+	SensorReportGeomagneticRotationVector = &sensorReport{
+		GeomagneticQuaternionScalar,
+		4,
+		14,
+	}
+
+	// SensorReportGameRotationVector is the sensor report for the game rotation vector
+	SensorReportGameRotationVector = &sensorReport{
+		QuaternionScalar,
+		4,
+		12,
+	}
+
+	// InitialBnoSensorReportFourDimensional is the initial state of the BNO sensor report for 4D data
+	InitialBnoSensorReportFourDimensional = [4]float64{0.0, 0.0, 0.0, 0.0}
+
+	// SensorReportStepCounter is the sensor report for the step counter
+	SensorReportStepCounter = &sensorReport{
+		1,
+		1,
+		12,
+	}
+
+	// InitialBnoStepCount is the initial state of the BNO step count
+	InitialBnoStepCount uint16 = 0
+
+	// SensorReportShakeDetector is the sensor report for the shake detector
+	SensorReportShakeDetector = &sensorReport{
+		1,
+		1,
+		6,
+	}
+
+	// InitialBnoShakeDetected is the initial state of the BNO shake detection
+	InitialBnoShakeDetected = false
+
+	// SensorReportStabilityClassifier is the sensor report for the stability classifier
+	SensorReportStabilityClassifier = &sensorReport{
+		1,
+		1,
+		6,
+	}
+
+	// InitialBnoStabilityClassification is the initial state of the BNO stability classification
+	InitialBnoStabilityClassification = "Unknown"
+
+	// SensorReportActivityClassifier is the sensor report for the activity classifier
+	SensorReportActivityClassifier = &sensorReport{
+		1,
+		1,
+		16,
+	}
+
+	// InitialBnoMostLikelyClassification is the initial state of the BNO most likely classification
+	InitialBnoMostLikelyClassification = "Unknown"
+
+	// InitialBnoClassifications is the initial state of the BNO classifications
+	InitialBnoClassifications = map[string]int{
+		"Tilting":    -1,
+		"OnStairs":   -1,
+		"On-Foot":    -1,
+		"Other":      -1,
+		"On-Bicycle": -1,
+		"Still":      -1,
+		"Walking":    -1,
+		"Unknown":    -1,
+		"Running":    -1,
+		"In-Vehicle": -1,
+	}
+
+	// AvailableSensorReports is a map of available sensor reports
 	AvailableSensorReports = map[uint8]*sensorReport{
-		BnoReportAccelerometer: newSensorReport(
-			AccelerometerScalar,
-			3,
-			10,
-		),
-		BnoReportGravity: newSensorReport(
-			AccelerometerScalar,
-			3,
-			10,
-		),
-		BnoReportGyroscope: newSensorReport(
-			GyroscopeScalar,
-			3,
-			10,
-		),
-		BnoReportMagnetometer: newSensorReport(
-			MagneticScalar,
-			3,
-			10,
-		),
-		BnoReportLinearAcceleration: newSensorReport(
-			AccelerometerScalar,
-			3,
-			10,
-		),
-		BnoReportRotationVector: newSensorReport(
-			QuaternionScalar,
-			4,
-			14,
-		),
-		BnoReportGeomagneticRotationVector: newSensorReport(
-			GeomagneticQuaternionScalar,
-			4,
-			14,
-		),
-		BnoReportGameRotationVector: newSensorReport(
-			QuaternionScalar,
-			4,
-			12,
-		),
-		BnoReportStepCounter:         newSensorReport(1, 1, 12),
-		BnoReportShakeDetector:       newSensorReport(1, 1, 6),
-		BnoReportStabilityClassifier: newSensorReport(1, 1, 6),
-		BnoReportActivityClassifier:  newSensorReport(1, 1, 16),
-		BnoReportRawAccelerometer:    newSensorReport(1, 3, 16),
-		BnoReportRawGyroscope:        newSensorReport(1, 3, 16),
-		BnoReportRawMagnetometer:     newSensorReport(1, 3, 16),
-	}
-
-	InitialReports = map[uint8]any{
-		BnoReportActivityClassifier: map[string]any{
-			"Tilting":     -1,
-			"most_likely": "Unknown",
-			"OnStairs":    -1,
-			"On-Foot":     -1,
-			"Other":       -1,
-			"On-Bicycle":  -1,
-			"Still":       -1,
-			"Walking":     -1,
-			"Unknown":     -1,
-			"Running":     -1,
-			"In-Vehicle":  -1,
-		},
-		BnoReportStabilityClassifier:       "Unknown",
-		BnoReportRotationVector:            []int{0.0, 0.0, 0.0, 0.0},
-		BnoReportGameRotationVector:        []int{0.0, 0.0, 0.0, 0.0},
-		BnoReportGeomagneticRotationVector: []int{0.0, 0.0, 0.0, 0.0},
+		ReportIDAccelerometer:             SensorReportAccelerometer,
+		ReportIDGravity:                   SensorReportGravity,
+		ReportIDGyroscope:                 SensorReportGyroscope,
+		ReportIDMagnetometer:              SensorReportMagnetometer,
+		ReportIDLinearAcceleration:        SensorReportLinearAcceleration,
+		ReportIDRotationVector:            SensorReportRotationVector,
+		ReportIDGeomagneticRotationVector: SensorReportGeomagneticRotationVector,
+		ReportIDGameRotationVector:        SensorReportGameRotationVector,
+		ReportIDStepCounter:               SensorReportStepCounter,
+		ReportIDShakeDetector:             SensorReportShakeDetector,
+		ReportIDStabilityClassifier:       SensorReportStabilityClassifier,
+		ReportIDActivityClassifier:        SensorReportActivityClassifier,
+		ReportIDRawAccelerometer:          SensorReportRawAccelerometer,
+		ReportIDRawGyroscope:              SensorReportRawGyroscope,
+		ReportIDRawMagnetometer:           SensorReportRawMagnetometer,
 	}
 
 	// ReportAccuracyStatus is a list of accuracy status strings
