@@ -6,31 +6,31 @@ import (
 )
 
 type (
-	// packetHeader represents the header of a BNO08x packet
-	packetHeader struct {
+	// PacketHeader represents the header of a BNO08x Packet
+	PacketHeader struct {
 		ChannelNumber   uint8
 		SequenceNumber  uint8
 		DataLength      int
 		PacketByteCount int
 	}
 
-	// packet represents a BNO08x packet
-	packet struct {
-		Header *packetHeader
+	// Packet represents a BNO08x Packet
+	Packet struct {
+		Header *PacketHeader
 		Data   []byte
 	}
 )
 
-// newPacketHeader creates a packetHeader from a given buffer.
+// NewPacketHeader creates a PacketHeader from a given buffer.
 //
 // Parameters:
 //
-//	packetBytes: A pointer to a byte slice containing the packet data.
+//	packetBytes: A pointer to a byte slice containing the Packet data.
 //
 // Returns:
 //
-//	A packetHeader object or an error if the buffer is too short.
-func newPacketHeader(packetBytes *[]byte) (*packetHeader, error) {
+//	A PacketHeader object or an error if the buffer is too short.
+func NewPacketHeader(packetBytes *[]byte) (*PacketHeader, error) {
 	// Check if the provided packetBytes is nil
 	if packetBytes == nil {
 		return nil, ErrNilPacketBytes
@@ -49,7 +49,7 @@ func newPacketHeader(packetBytes *[]byte) (*packetHeader, error) {
 	if dataLength < 0 {
 		dataLength = 0
 	}
-	return &packetHeader{
+	return &PacketHeader{
 		ChannelNumber:   channelNumber,
 		SequenceNumber:  sequenceNumber,
 		DataLength:      dataLength,
@@ -57,91 +57,91 @@ func newPacketHeader(packetBytes *[]byte) (*packetHeader, error) {
 	}, nil
 }
 
-// IsError checks if the provided packetHeader indicates an error condition.
+// IsError checks if the provided PacketHeader indicates an error condition.
 //
 // Parameters:
 //
-//	header: The packetHeader to check.
+//	header: The PacketHeader to check.
 //
 // Returns:
 //
 //	True if the header indicates an error, otherwise false.
-func (header *packetHeader) IsError() bool {
+func (header *PacketHeader) IsError() bool {
 	// Check if the channel number is greater than 5
 	if header.ChannelNumber > 5 {
 		return true
 	}
-	// Check if the packet byte count and sequence number indicate an error
+	// Check if the Packet byte count and sequence number indicate an error
 	if header.PacketByteCount == 0xFFFF && header.SequenceNumber == 0xFF {
 		return true
 	}
 	return false
 }
 
-// newPacket creates a new packet from the provided packet bytes.
+// NewPacket creates a new Packet from the provided Packet bytes.
 //
 // Parameters:
 //
-//	packetBytes: A pointer to a byte slice containing the packet data.
+//	packetBytes: A pointer to a byte slice containing the Packet data.
 //
 // Returns:
 //
-//	A packet object or an error if the packet header could not be created.
-func newPacket(packetBytes *[]byte) (*packet, error) {
+//	A Packet object or an error if the Packet header could not be created.
+func NewPacket(packetBytes *[]byte) (*Packet, error) {
 	// Check if the provided packetBytes is nil
 	if packetBytes == nil {
 		return nil, ErrNilPacketBytes
 	}
 
-	// Create a new packetHeader from the packet bytes
-	header, err := newPacketHeader(packetBytes)
+	// Create a new PacketHeader from the Packet bytes
+	header, err := NewPacketHeader(packetBytes)
 	if err != nil {
 		return nil, err
 	}
 
-	return &packet{
+	return &Packet{
 		Header: header,
 		Data:   (*packetBytes)[PacketHeaderLength : PacketHeaderLength+header.DataLength],
 	}, nil
 }
 
-// ReportID returns the report ID of the packet.
+// ReportID returns the report ID of the Packet.
 //
 // Returns:
 //
 //	The report ID as an uint8 or an error if the data is too short.
-func (p *packet) ReportID() (uint8, error) {
+func (p *Packet) ReportID() (uint8, error) {
 	if len(p.Data) < 1 {
 		return 0, ErrPacketDataTooShort
 	}
 	return p.Data[0], nil
 }
 
-// ChannelNumber returns the channel number of the packet.
+// ChannelNumber returns the channel number of the Packet.
 //
 // Returns:
 //
 //	The channel number as an uint8.
-func (p *packet) ChannelNumber() uint8 {
+func (p *Packet) ChannelNumber() uint8 {
 	return p.Header.ChannelNumber
 }
 
-// IsError checks if the packet indicates an error condition.
+// IsError checks if the Packet indicates an error condition.
 //
 // Returns:
 //
-//	True if the packet is an error, otherwise false.
-func (p *packet) IsError() bool {
+//	True if the Packet is an error, otherwise false.
+func (p *Packet) IsError() bool {
 	return p.Header.IsError()
 }
 
-// String returns a string representation of the packet for debugging purposes.
+// String returns a string representation of the Packet for debugging purposes.
 //
 // Returns:
 //
-//	A string containing the packet details.
-func (p *packet) String() *string {
-	outputStr := "\n\t\t********** packet *************\n"
+//	A string containing the Packet details.
+func (p *Packet) String() *string {
+	outputStr := "\n\t\t********** Packet *************\n"
 	outputStr += "DBG::\t\t HEADER:\n"
 
 	outputStr += fmt.Sprintf("DBG::\t\t Data Length: %d\n", p.Header.DataLength)

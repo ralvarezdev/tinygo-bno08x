@@ -94,7 +94,7 @@ type (
 	}
 )
 
-// newReport creates a new report from the packet data.
+// newReport creates a new report from the Packet data.
 //
 // Parameters:
 //
@@ -116,53 +116,53 @@ func newReport(id uint8, data *[]byte) (*report, error) {
 	}, nil
 }
 
-// newReportFromPacket creates a new report from the provided packet.
+// newReportFromPacket creates a new report from the provided Packet.
 //
 // Parameters:
 //
-//	packet: A pointer to a packet containing the report data.
+//	Packet: A pointer to a Packet containing the report data.
 //
 // Returns:
 //
-// A pointer to the newly created report or an error if the packet is nil
-func newReportFromPacket(packet *packet) (*report, error) {
-	// Check if the provided packet is nil
+// A pointer to the newly created report or an error if the Packet is nil
+func newReportFromPacket(packet *Packet) (*report, error) {
+	// Check if the provided Packet is nil
 	if packet == nil {
 		return nil, ErrNilPacket
 	}
 
-	// Get the report ID from the packet
+	// Get the report ID from the Packet
 	reportID, err := packet.ReportID()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get report ID: %w", err)
 	}
 
-	// Create a new report from the packet data
+	// Create a new report from the Packet data
 	return newReport(reportID, &packet.Data)
 }
 
-// newReportFromPacketBytes creates a new report from the provided packet bytes.
+// newReportFromPacketBytes creates a new report from the provided Packet bytes.
 //
 // Parameters:
 //
-//	packetBytes: A pointer to a byte slice containing the packet bytes.
+//	packetBytes: A pointer to a byte slice containing the Packet bytes.
 //
 // Returns:
 //
-// A pointer to the newly created report or an error if the packet bytes are nil
+// A pointer to the newly created report or an error if the Packet bytes are nil
 func newReportFromPacketBytes(packetBytes *[]byte) (*report, error) {
-	// Check if the provided packet bytes are nil
+	// Check if the provided Packet bytes are nil
 	if packetBytes == nil {
 		return nil, ErrNilPacketBytes
 	}
 
-	// Create a new packet from the packet bytes
-	packet, err := newPacket(packetBytes)
+	// Create a new Packet from the Packet bytes
+	packet, err := NewPacket(packetBytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create packet from bytes: %w", err)
+		return nil, fmt.Errorf("failed to create Packet from bytes: %w", err)
 	}
 
-	// Create a new report from the packet
+	// Create a new report from the Packet
 	return newReportFromPacket(packet)
 }
 

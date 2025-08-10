@@ -2,7 +2,6 @@ package go_adafruit_bno055
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"machine"
 	"time"
@@ -27,26 +26,24 @@ Reset reasons from ID Report response:
 type (
 	// PacketReader is an interface for reading packets from the BNO08x sensor
 	PacketReader interface {
-		ReadPacket() (*packet, error)
+		ReadPacket() (*Packet, error)
 		IsDataReady() bool
 	}
 
 	// PacketWriter is an interface for writing packets to the BNO08x sensor
 	PacketWriter interface {
-		SendPacket(channel uint8, data []byte) (int, error)
+		SendPacket(channel uint8, data []byte) (uint8, error)
 	}
 
 	// BNO08X struct represents the BNO08x IMU sensor
 	BNO08X struct {
 		packetReader              PacketReader
 		packetWriter              PacketWriter
-		debugFlag                 bool
+		debugger                  Debugger
 		reset                     *machine.PinOutput
-		dataBuffer                []byte
+		dataBuffer                DataBuffer
 		commandBuffer             []byte
 		packetSlices              []*report
-		sequenceNumber            []int
-		twoEndedSequenceNumbers   map[int]int
 		dcdSavedAt                float64
 		meCalibrationStartedAt    float64
 		calibrationComplete       bool
@@ -75,39 +72,52 @@ type (
 
 	// Options struct holds configuration options for the BNO08X instance
 	Options struct {
-		Debug bool
-		Reset *machine.PinOutput
+		Debugger Debugger // Debugger instance for debug messages
+		Reset    *machine.PinOutput
 	}
 )
 
 // NewBNO08X creates a new BNO08X instance with the specified reset pin and debug mode
+//
+// Parameters:
+//
+//	packetReader: The PacketReader to read packets from the BNO08X sensor.
+//	packetWriter: The PacketWriter to write packets to the BNO08X sensor.
+//	dataBuffer: The DataBuffer to store Packet data.
+//	options: Optional configuration options for the BNO08X instance.
+//
+// Returns:
+//
+// A pointer to a new BNO08X instance or an error if initialization fails.
 func NewBNO08X(
 	packetReader PacketReader,
 	packetWriter PacketWriter,
+	dataBuffer DataBuffer,
 	options *Options,
 ) (*BNO08X, error) {
-	// Check if packetReader and packetWriter are provided
+	// Check if packetReader, packetWriter and dataBuffer are provided
 	if packetReader == nil {
 		return nil, ErrNilPacketReader
 	}
 	if packetWriter == nil {
 		return nil, ErrNilPacketWriter
 	}
+	if dataBuffer == nil {
+		return nil, ErrNilDataBuffer
+	}
 
 	// If options are nil, initialize with default values
 	if options == nil {
-		options = &Options{true, nil}
+		options = &Options{nil, nil}
 	}
 	bno08x := BNO08X{
 		packetReader:              packetReader,
 		packetWriter:              packetWriter,
-		debugFlag:                 options.Debug,
+		debugger:                  options.Debugger,
 		reset:                     options.Reset,
-		dataBuffer:                make([]byte, DataBufferSize),
+		dataBuffer:                dataBuffer,
 		commandBuffer:             make([]byte, CommandBufferSize),
 		packetSlices:              make([]*report, 0),
-		sequenceNumber:            make([]int, 6), // Assuming 6 channels
-		twoEndedSequenceNumbers:   make(map[int]int),
 		dcdSavedAt:                -1.0,
 		meCalibrationStartedAt:    -1.0,
 		calibrationComplete:       false,
@@ -139,16 +149,14 @@ func NewBNO08X(
 	return &bno08x, bno08x.initialize()
 }
 
-// debug function to print debug messages
+// debug prints debug messages if debugging is enabled.
 //
 // Parameters:
 //
 //	args: The arguments to print in the debug message
 func (b *BNO08X) debug(args ...any) {
-	if b.debugFlag {
-		fmt.Print("DBG::\t\t")
-		fmt.Print(args...)
-		fmt.Println()
+	if b.debugger != nil {
+		b.debugger.Debug(args...)
 	}
 }
 
@@ -180,13 +188,13 @@ func (b *BNO08X) softwareReset() error {
 	data := []byte{1}
 
 	if _, err := b.packetWriter.SendPacket(ChannelExe, data); err != nil {
-		b.debug("Error sending software reset packet:", err)
+		b.debug("Error sending software reset Packet:", err)
 		return err
 	}
 	time.Sleep(500 * time.Millisecond)
 
 	if _, err := b.packetWriter.SendPacket(ChannelExe, data); err != nil {
-		b.debug("Error sending second software reset packet:", err)
+		b.debug("Error sending second software reset Packet:", err)
 		return err
 	}
 	time.Sleep(500 * time.Millisecond)
@@ -249,22 +257,22 @@ func (b *BNO08X) checkID() (bool, error) {
 	// Send the ID request report
 	b.debug("\n** Sending ID Request Report **")
 	if _, err := b.packetWriter.SendPacket(ChannelCONTROL, data); err != nil {
-		b.debug("Error sending ID request packet:", err)
+		b.debug("Error sending ID request Packet:", err)
 		return false, err
 	}
-	b.debug("\n** Waiting for packet **")
+	b.debug("\n** Waiting for Packet **")
 	for {
 		reportID := ReportIDSHTPReportProductIDResponse
 		_, err := b.waitForPacketType(ChannelCONTROL, &reportID, nil)
 		if err != nil {
-			b.debug("Error waiting for ID response packet:", err)
+			b.debug("Error waiting for ID response Packet:", err)
 			return false, err
 		}
 
-		// Read the packet data into the data buffer
-		sensorIDReport, err := newReportFromPacketBytes(&b.dataBuffer)
+		// Read the Packet data into the data buffer
+		sensorIDReport, err := newReportFromPacketBytes(b.dataBuffer.GetData())
 		if err == nil {
-			b.debug("Error creating sensor ID report from packet data")
+			b.debug("Error creating sensor ID report from Packet data")
 			continue
 		}
 
@@ -293,7 +301,7 @@ func (b *BNO08X) checkID() (bool, error) {
 	// return false
 }
 
-// waitForPacketType waits for a packet of a specific type on a given channel, optionally filtering by report ID.
+// waitForPacketType waits for a Packet of a specific type on a given channel, optionally filtering by report ID.
 //
 // Parameters:
 //
@@ -303,12 +311,12 @@ func (b *BNO08X) checkID() (bool, error) {
 //
 // Returns:
 //
-//	A pointer to the packet if found, or an error if the timeout is reached or an error occurs.
+//	A pointer to the Packet if found, or an error if the timeout is reached or an error occurs.
 func (b *BNO08X) waitForPacketType(
 	channelNumber uint8,
 	reportID *uint8,
 	timeout *time.Duration,
-) (*packet, error) {
+) (*Packet, error) {
 	startTime := time.Now()
 
 	// Check if reportID is provided, and prepare a debug message accordingly
@@ -316,7 +324,7 @@ func (b *BNO08X) waitForPacketType(
 	if reportID != nil {
 		reportIDStr = fmt.Sprintf(" with report id 0x%X", *reportID)
 	}
-	b.debug("** Waiting for packet on channel", channelNumber, reportIDStr)
+	b.debug("** Waiting for Packet on channel", channelNumber, reportIDStr)
 
 	// Check if timeout is provided, otherwise set a default
 	if timeout == nil {
@@ -340,28 +348,28 @@ func (b *BNO08X) waitForPacketType(
 			}
 		}
 		if newPacket.ChannelNumber() != ChannelExe && newPacket.ChannelNumber() != ChannelSHTPCommand {
-			b.debug("passing packet to handler for de-slicing")
+			b.debug("passing Packet to handler for de-slicing")
 			if err := b.handlePacket(newPacket); err != nil {
 				return nil, err
 			}
 		}
 	}
 	return nil, fmt.Errorf(
-		"timed out waiting for a packet on channel %d",
+		"timed out waiting for a Packet on channel %d",
 		channelNumber,
 	)
 }
 
-// waitForPacket waits for a packet to be available from the packet reader within the specified timeout.
+// waitForPacket waits for a Packet to be available from the Packet reader within the specified timeout.
 //
 // Parameters:
 //
-//	timeout: The maximum duration to wait for a packet.
+//	timeout: The maximum duration to wait for a Packet.
 //
 // Returns:
 //
-//	A pointer to the packet if available, or an error if the timeout is reached or an error occurs.
-func (b *BNO08X) waitForPacket(timeout time.Duration) (*packet, error) {
+//	A pointer to the Packet if available, or an error if the timeout is reached or an error occurs.
+func (b *BNO08X) waitForPacket(timeout time.Duration) (*Packet, error) {
 	startTime := time.Now()
 	for time.Since(startTime) < timeout {
 		// Check if data is ready to be read
@@ -369,7 +377,7 @@ func (b *BNO08X) waitForPacket(timeout time.Duration) (*packet, error) {
 			continue
 		}
 
-		// Read the packet from the packet reader
+		// Read the Packet from the Packet reader
 		newPacket, err := b.packetReader.ReadPacket()
 		if err != nil {
 			return nil, err
@@ -379,23 +387,23 @@ func (b *BNO08X) waitForPacket(timeout time.Duration) (*packet, error) {
 	return nil, ErrPacketTimeout
 }
 
-// handlePacket processes a packet by separating it into individual reports and processing each report.
+// handlePacket processes a Packet by separating it into individual reports and processing each report.
 //
 // Parameters:
 //
-//	packet: A pointer to the packet to be processed.
+//	Packet: A pointer to the Packet to be processed.
 //
 // Returns:
 //
-//	An error if the packet cannot be processed, otherwise nil.
-func (b *BNO08X) handlePacket(packet *packet) error {
+//	An error if the Packet cannot be processed, otherwise nil.
+func (b *BNO08X) handlePacket(packet *Packet) error {
 	// Split out reports first
 	if err := separateBatch(packet, &b.packetSlices); err != nil {
 		fmt.Println(packet)
 		return err
 	}
 
-	// Process each report in the packet slices
+	// Process each report in the Packet slices
 	for len(b.packetSlices) > 0 {
 		// Pop the last slice
 		lastReport := b.packetSlices[len(b.packetSlices)-1]
@@ -430,7 +438,7 @@ func (b *BNO08X) processReport(report *report) error {
 	}
 
 	b.debug("\tProcessing report:", Reports[report.ID])
-	if b.debugFlag {
+	if b.debugger != nil {
 		outputStr := ""
 		for idx, packetByte := range report.Data {
 			packetIndex := idx
@@ -683,7 +691,7 @@ func (b *BNO08X) handleCommandResponse(report *report) error {
 	return nil
 }
 
-// processAvailablePackets processes all available packets from the packet reader, handling each packet until the maximum number of packets is reached.
+// processAvailablePackets processes all available packets from the Packet reader, handling each Packet until the maximum number of packets is reached.
 //
 // Parameters:
 //
@@ -699,7 +707,7 @@ func (b *BNO08X) processAvailablePackets(maxPackets *int) {
 			continue
 		}
 		if err := b.handlePacket(newPacket); err != nil {
-			b.debug("Error handling packet:", err)
+			b.debug("Error handling Packet:", err)
 			continue
 		}
 		processedCount++
@@ -865,30 +873,7 @@ func (b *BNO08X) RawMagnetic() *[3]float64 {
 	return b.rawMagnetometer
 }
 
-// incrementReportSequenceNumber increments the sequence number for the given report ID, wrapping at 256.
-//
-// Parameters:
-//
-//	reportID: The ID of the report for which to increment the sequence number.
-func (b *BNO08X) incrementReportSequenceNumber(reportID uint8) {
-	current := b.twoEndedSequenceNumbers[int(reportID)]
-	b.twoEndedSequenceNumbers[int(reportID)] = (current + 1) % 256
-}
-
-// getReportSequenceNumber returns the current sequence number for the given report ID.
-//
-// Parameters:
-//
-//	reportID: The ID of the report for which to get the sequence number.
-//
-// Returns:
-//
-//	The current sequence number for the report ID.
-func (b *BNO08X) getReportSequenceNumber(reportID uint8) int {
-	return b.twoEndedSequenceNumbers[int(reportID)]
-}
-
-// getFeatureEnableReport creates a packet to enable a feature on the BNO08X sensor.
+// getFeatureEnableReport creates a Packet to enable a feature on the BNO08X sensor.
 //
 // Parameters:
 //
@@ -984,27 +969,6 @@ func (b *BNO08X) isFeatureEnabled(featureID uint8) bool {
 	return ok
 }
 
-// updateSequenceNumber updates the cached sequence number for the given channel using the provided packet.
-//
-// Parameters:
-//
-//	newPacket: A pointer to the packet containing the channel and sequence number.
-//
-// Returns:
-//
-//	An error if the sequence number could not be updated, otherwise nil.
-func (b *BNO08X) updateSequenceNumber(newPacket *packet) error {
-	// Check if the newPacket is nil
-	if newPacket == nil {
-		return ErrNilPacket
-	}
-
-	channel := newPacket.ChannelNumber()
-	seq := newPacket.Header.SequenceNumber
-	b.sequenceNumber[int(channel)] = int(seq)
-	return nil
-}
-
 // BeginCalibration starts the self-calibration routine for the BNO08X sensor.
 func (b *BNO08X) BeginCalibration() {
 	// Begin the sensor's self-calibration routine
@@ -1058,7 +1022,7 @@ func (b *BNO08X) sendMeCommand(subcommandParams []byte) {
 	err := insertCommandRequestReport(
 		MECalibrate,
 		&b.commandBuffer, // should use b.dataBuffer, but sendPacket doesn't
-		b.getReportSequenceNumber(ReportIDCommandRequest),
+		b.dataBuffer.GetReportSequenceNumber(ReportIDCommandRequest),
 		&subcommandParams,
 	)
 	if err != nil {
@@ -1066,13 +1030,13 @@ func (b *BNO08X) sendMeCommand(subcommandParams []byte) {
 		return
 	}
 
-	// Send the command request packet
+	// Send the command request Packet
 	_, err = b.packetWriter.SendPacket(ChannelCONTROL, localBuffer)
 	if err != nil {
-		b.debug("Error sending command request packet:", err)
+		b.debug("Error sending command request Packet:", err)
 		return
 	}
-	b.incrementReportSequenceNumber(ReportIDCommandRequest)
+	b.dataBuffer.IncrementReportSequenceNumber(ReportIDCommandRequest)
 
 	// Wait for the command response
 	for time.Since(startTime) < DefaultTimeout {
@@ -1095,19 +1059,19 @@ func (b *BNO08X) SaveCalibrationData() error {
 	err := insertCommandRequestReport(
 		SaveDCD,
 		&localBuffer, // should use b.dataBuffer, but sendPacket doesn't
-		b.getReportSequenceNumber(ReportIDCommandRequest),
+		b.dataBuffer.GetReportSequenceNumber(ReportIDCommandRequest),
 		nil,
 	)
 	if err != nil {
 		return err
 	}
 
-	// Send the command request packet to save calibration data
+	// Send the command request Packet to save calibration data
 	_, err = b.packetWriter.SendPacket(ChannelCONTROL, localBuffer)
 	if err != nil {
 		return err
 	}
-	b.incrementReportSequenceNumber(ReportIDCommandRequest)
+	b.dataBuffer.IncrementReportSequenceNumber(ReportIDCommandRequest)
 
 	// Wait for the command response indicating that the calibration data was saved
 	for time.Since(startTime) < DefaultTimeout {

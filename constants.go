@@ -144,7 +144,7 @@ const (
 	// CommandReset is the command to reset the BNO08x sensor
 	CommandReset uint8 = 0x01
 
-	// PacketHeaderLength is the length of the packet header in bytes
+	// PacketHeaderLength is the length of the Packet header in bytes
 	PacketHeaderLength int = 4
 
 	// EnabledActivities is a bitmask for enabled activities. All activities; 1 bit set for each of 8 activities, + Unknown
@@ -155,6 +155,12 @@ const (
 
 	// CommandBufferSize is the size of the command buffer
 	CommandBufferSize = 12
+
+	// I2CDefaultAddress is the default I2C address for the BNO08x sensor
+	I2CDefaultAddress uint8 = 0x4A
+
+	// I2CFrequency is the I2C bus frequency in Hz
+	I2CFrequency = 400000 // 400 kHz
 )
 
 var (

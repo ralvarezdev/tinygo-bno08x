@@ -1,121 +1,380 @@
 package go_adafruit_bno055
 
+import (
+	"fmt"
+	"machine"
+)
+
 /*
 SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
 
 SPDX-License-Identifier: MIT
 */
 
-from struct import pack_into
-
-from adafruit_bus_device import i2c_device
-
-from . import BNO08X, DATA_BUFFER_SIZE, Packet, PacketError, const
-
-const Bno08xDefaultAddress uint8 = 0x4A
-
 type (
-	BNO08X_I2C(BNO08X) struct:
-    """Library for the BNO08x IMUs from Hillcrest Laboratories
+	// I2C is the I2C implementation of the BNO08X sensor.
+	I2C struct {
+		BNO08X
+		i2cBus  machine.I2C
+		address uint16
+	}
 
-    :param ~busio.I2C i2c_bus: The I2C bus the BNO08x is connected to.
+	// I2CPacketReader represents the Packet reader for the I2C interface.
+	I2CPacketReader struct {
+		i2cBus     machine.I2C
+		dataBuffer DataBuffer
+		debugger   Debugger
+		address    uint16 // I2C address of the device
+	}
 
-    """
+	// I2CPacketWriter represents the Packet writer for the I2C interface.
+	I2CPacketWriter struct {
+		i2cBus     machine.I2C
+		dataBuffer DataBuffer
+		debugger   Debugger
+		address    uint16 // I2C address of the device
+	}
+)
 
-    def __init__(self, i2c_bus, reset=None, address=_BNO08X_DEFAULT_ADDRESS, debug=False):
-        self.bus_device_obj = i2c_device.I2CDevice(i2c_bus, address)
-        super().__init__(reset, debug)
+// NewI2C creates a new I2C instance for the BNO08X sensor.
+//
+// Parameters:
+//
+// i2cBus: The I2C bus to use for communication.
+// sdaPin: The SDA pin for the I2C bus.
+// sclPin: The SCL pin for the I2C bus.
+// address: The I2C address of the BNO08X sensor.
+// packetReader: The I2CPacketReader to use for reading Packets.
+// packetWriter: The I2CPacketWriter to use for writing Packets.
+// dataBuffer: The DataBuffer to use for storing Packet data.
+// options: Optional configuration options for the BNO08X sensor.
+//
+// Returns:
+//
+// A pointer to a new I2C instance or an error if initialization fails.
+func NewI2C(
+	i2cBus machine.I2C,
+	sdaPin machine.Pin,
+	sclPin machine.Pin,
+	address uint16,
+	dataBuffer DataBuffer,
+	options *Options,
+) (*I2C, error) {
+	// Configure the I2C bus
+	i2cBus.Configure(
+		machine.I2CConfig{
+			SCL:       sclPin,
+			SDA:       sdaPin,
+			Frequency: I2CFrequency,
+		},
+	)
 
-    def _send_packet(self, channel, data):
-        data_length = len(data)
-        write_length = data_length + 4
+	// Get the debugger from options
+	var debugger Debugger
+	if options != nil {
+		debugger = options.Debugger
+	}
 
-        pack_into("<H", self._data_buffer, 0, write_length)
-        self._data_buffer[2] = channel
-        self._data_buffer[3] = self._sequence_number[channel]
-        for idx, send_byte in enumerate(data):
-            self._data_buffer[4 + idx] = send_byte
-        packet = Packet(self._data_buffer)
-        self._dbg("Sending packet:")
-        self._dbg(packet)
-        with self.bus_device_obj as i2c:
-            i2c.write(self._data_buffer, end=write_length)
+	// Initialize the packet reader
+	packetReader, err := newI2CPacketReader(
+		i2cBus,
+		address,
+		dataBuffer,
+		debugger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create I2CPacketReader: %w", err)
+	}
 
-        self._sequence_number[channel] = (self._sequence_number[channel] + 1) % 256
-        return self._sequence_number[channel]
+	// Initialize the packet writer
+	packetWriter, err := newI2CPacketWriter(
+		i2cBus,
+		address,
+		dataBuffer,
+		debugger,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create I2CPacketWriter: %w", err)
+	}
 
-    # returns true if available data was read
-    # the sensor will always tell us how much there is, so no need to track it ourselves
+	// Initialize the BNO08X sensor
+	bno08x, err := NewBNO08X(packetReader, packetWriter, dataBuffer, options)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize BNO08X: %w", err)
+	}
+	return &I2C{
+		BNO08X:  *bno08x,
+		i2cBus:  i2cBus,
+		address: address,
+	}, nil
+}
 
-    def _read_header(self):
-        """Reads the first 4 bytes available as a header"""
-        with self.bus_device_obj as i2c:
-            i2c.readinto(self._data_buffer, end=4)  # this is expecting a header
-        packet_header = Packet.header_from_buffer(self._data_buffer)
-        self._dbg(packet_header)
-        return packet_header
+// newI2CPacketWriter creates a new I2CPacketWriter instance.
+//
+// Parameters:
+//
+// i2cBus: The I2C bus to use for communication.
+// address: The I2C address of the device to read from.
+// dataBuffer: The data buffer to use for storing Packet data.
+// debugger: The debugger to use for logging and debugging information.
+//
+// Returns:
+//
+// A pointer to a new I2CPacketWriter instance, or an error if the dataBuffer is nil.
+func newI2CPacketWriter(
+	i2cBus machine.I2C,
+	address uint16,
+	dataBuffer DataBuffer,
+	debugger Debugger,
+) (*I2CPacketWriter, error) {
+	// Check if the dataBuffer is provided
+	if dataBuffer == nil {
+		return nil, ErrNilDataBuffer
+	}
 
-    def _read_packet(self):
-        with self.bus_device_obj as i2c:
-            i2c.readinto(self._data_buffer, end=4)  # this is expecting a header?
-        self._dbg("")
-        # print("SHTP READ packet header: ", [hex(x) for x in self._data_buffer[0:4]])
+	return &I2CPacketWriter{
+		i2cBus:     i2cBus,
+		dataBuffer: dataBuffer,
+		debugger:   debugger,
+		address:    address,
+	}, nil
+}
 
-        header = Packet.header_from_buffer(self._data_buffer)
-        packet_byte_count = header.packet_byte_count
-        channel_number = header.channel_number
-        sequence_number = header.sequence_number
+// debug is a helper function to log debug messages if debugging is enabled.
+//
+// Parameters:
+//
+// args: The arguments to log as debug messages.
+func (pw I2CPacketWriter) debug(args ...interface{}) {
+	if pw.debugger != nil {
+		pw.debugger.Debug(args...)
+	}
+}
 
-        self._sequence_number[channel_number] = sequence_number
-        if packet_byte_count == 0:
-            self._dbg("SKIPPING NO PACKETS AVAILABLE IN i2c._read_packet")
-            raise PacketError("No packet available")
-        packet_byte_count -= 4
-        self._dbg(
-            "channel",
-            channel_number,
-            "has",
-            packet_byte_count,
-            "bytes available to read",
-        )
+// SendPacket sends a Packet over I2C.
+//
+// Parameters:
+//
+// channel: The channel number to send the Packet on.
+// data: The data to send in the Packet.
+//
+// Returns:
+//
+// The sequence number of the Packet sent, or an error if sending fails.
+func (pw I2CPacketWriter) SendPacket(channel uint8, data []byte) (
+	uint8,
+	error,
+) {
+	dataLength := len(data)
+	writeLength := dataLength + 4
 
-        self._read(packet_byte_count)
+	// Ensure buffer is large enough
+	dataBuffer := *pw.dataBuffer.GetData()
+	if len(dataBuffer) < writeLength {
+		dataBuffer = make([]byte, writeLength)
+		pw.dataBuffer.SetData(&dataBuffer)
+	}
 
-        new_packet = Packet(self._data_buffer)
-        if self._debug:
-            print(new_packet)
+	// Pack header: first two bytes are writeLength (little-endian)
+	dataBuffer[0] = uint8(writeLength & 0xFF)
+	dataBuffer[1] = uint8((writeLength >> 8) & 0xFF)
+	dataBuffer[2] = channel
+	sequenceNumber, err := pw.dataBuffer.GetSequenceNumber(channel)
+	if err != nil {
+		return 0, err
+	}
+	dataBuffer[3] = sequenceNumber
 
-        self._update_sequence_number(new_packet)
+	// Copy data into buffer
+	copy(dataBuffer[4:], data)
 
-        return new_packet
+	// Create a new Packet from the data buffer
+	dataBufferWriteLength := make([]byte, writeLength)
+	copy(dataBufferWriteLength, dataBuffer[:writeLength])
+	packet, err := NewPacket(&dataBufferWriteLength)
+	if err != nil {
+		return sequenceNumber, fmt.Errorf("failed to create Packet: %w", err)
+	}
+	pw.debug("Sending Packet:")
+	pw.debug(packet)
 
-    # returns true if all requested data was read
-    def _read(self, requested_read_length):
-        self._dbg("trying to read", requested_read_length, "bytes")
-        # +4 for the header
-        total_read_length = requested_read_length + 4
-        if total_read_length > DATA_BUFFER_SIZE:
-            self._data_buffer = bytearray(total_read_length)
-            self._dbg(
-                "!!!!!!!!!!!! ALLOCATION: increased _data_buffer to bytearray(%d) !!!!!!!!!!!!! "
-                % total_read_length
-            )
-        with self.bus_device_obj as i2c:
-            i2c.readinto(self._data_buffer, end=total_read_length)
+	// Write to I2C
+	if err = pw.i2cBus.Write(pw.address, dataBufferWriteLength); err != nil {
+		return sequenceNumber, err
+	}
 
-    @property
-    def _data_ready(self):
-        header = self._read_header()
+	// Update sequence number
+	sequenceNumber, err = pw.dataBuffer.IncrementChannelSequenceNumber(channel)
+	if err != nil {
+		return 0, err
+	}
+	return sequenceNumber, nil
+}
 
-        if header.channel_number > 5:
-            self._dbg("channel number out of range:", header.channel_number)
-        if header.packet_byte_count == 0x7FFF:
-            print("Byte count is 0x7FFF/0xFFFF; Error?")
-            if header.sequence_number == 0xFF:
-                print("Sequence number is 0xFF; Error?")
-            ready = False
-        else:
-            ready = header.data_length > 0
+// newI2CPacketReader creates a new I2CPacketReader instance.
+//
+// Parameters:
+//
+// i2cBus: The I2C bus to use for communication.
+// debugger: The debugger to use for logging and debugging information.
+// dataBuffer: The data buffer to use for storing Packet data.
+// address: The I2C address of the device to read from.
+//
+// Returns:
+//
+// A pointer to a new I2CPacketReader instance.
+func newI2CPacketReader(
+	i2cBus machine.I2C,
+	address uint16,
+	dataBuffer DataBuffer,
+	debugger Debugger,
+) (*I2CPacketReader, error) {
+	// Check if the dataBuffer is provided
+	if dataBuffer == nil {
+		return nil, ErrNilDataBuffer
+	}
 
-        # self._dbg("\tdata ready", ready)
-        return ready
+	return &I2CPacketReader{
+		i2cBus:     i2cBus,
+		debugger:   debugger,
+		dataBuffer: dataBuffer,
+		address:    address,
+	}, nil
+}
+
+// debug is a helper function to log debug messages if debugging is enabled.
+//
+// Parameters:
+//
+// args: The arguments to log as debug messages.
+func (pr I2CPacketReader) debug(args ...interface{}) {
+	if pr.debugger != nil {
+		pr.debugger.Debug(args)
+	}
+}
+
+// readHeader reads the Packet header from the I2C bus.
+//
+// Returns:
+//
+// A pointer to a PacketHeader or an error if reading the header fails.
+func (pr I2CPacketReader) readHeader() (*PacketHeader, error) {
+	// Read the first 4 bytes from the I2C bus to get the Packet header.
+	if err := pr.i2cBus.Read(pr.address, pr.dataBuffer); err != nil {
+		return nil, err
+	}
+	header, err := NewPacketHeader(pr.dataBuffer.GetData())
+	if err != nil {
+		return nil, err
+	}
+	pr.debug(header)
+	return header, nil
+}
+
+func (pr I2CPacketReader) ReadPacket() (*Packet, error) {
+	// Read the Packet header first
+	if err := pr.i2cBus.Read(pr.address, pr.dataBuffer); err != nil {
+		return nil, err
+	}
+	header, err := NewPacketHeader(pr.dataBuffer.GetData())
+	if err != nil {
+		return nil, err
+	}
+	packetByteCount := header.PacketByteCount
+	channelNumber := header.ChannelNumber
+	sequenceNumber := header.SequenceNumber
+
+	// Set sequence number in data buffer
+	if err = pr.dataBuffer.SetSequenceNumber(
+		channelNumber,
+		sequenceNumber,
+	); err != nil {
+		return nil, fmt.Errorf("failed to set sequence number: %w", err)
+	}
+	if packetByteCount == 0 {
+		pr.debug("SKIPPING NO PACKETS AVAILABLE IN i2c.readPacket")
+		return nil, ErrNoPacketAvailable
+	}
+	packetByteCount -= 4
+	pr.debug(
+		"channel",
+		channelNumber,
+		"has",
+		packetByteCount,
+		"bytes available to read",
+	)
+
+	// Read the remaining bytes of the Packet
+	if err = pr.read(packetByteCount); err != nil {
+		return nil, fmt.Errorf("failed to read Packet data: %w", err)
+	}
+
+	// Create a full Packet from the data buffer
+	newPacket, err := NewPacket(pr.dataBuffer.GetData())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Packet from bytes: %w", err)
+	}
+	pr.debug(*newPacket)
+
+	// Update the sequence number in the data buffer
+	if err = pr.dataBuffer.UpdateSequenceNumber(newPacket); err != nil {
+		return nil, fmt.Errorf("failed to update sequence number: %w", err)
+	}
+	return newPacket, nil
+}
+
+// read reads a specified number of bytes from the I2C bus.
+//
+// Parameters:
+//
+// requestedReadLength: The number of bytes to read from the I2C bus.
+//
+// Returns:
+//
+// An error if reading from the I2C bus fails, otherwise nil.
+func (pr I2CPacketReader) read(requestedReadLength int) error {
+	pr.debug("trying to read", requestedReadLength, "bytes")
+	totalReadLength := requestedReadLength + 4
+	if totalReadLength > DataBufferSize {
+		newDataBuffer := make([]byte, DataBufferSize)
+		pr.dataBuffer.SetData(&newDataBuffer)
+		pr.debug(
+			fmt.Sprintf(
+				"!!!!!!!!!!!! ALLOCATION: increased dataBuffer to %d !!!!!!!!!!!!!",
+				totalReadLength,
+			),
+		)
+	}
+	dataBuffer := pr.dataBuffer.GetData()
+	if err := pr.i2cBus.Read(
+		pr.address,
+		(*dataBuffer)[:totalReadLength],
+	); err != nil {
+		return err
+	}
+	return nil
+}
+
+// IsDataReady checks if there is data ready to be read from the I2C bus.
+//
+// Returns:
+//
+// True if data is ready, false otherwise. It also checks for errors in the header.
+func (pr I2CPacketReader) IsDataReady() bool {
+	header, err := pr.readHeader()
+	if err != nil {
+		pr.debug("error reading header:", err)
+		return false
+	}
+	if header.ChannelNumber > 5 {
+		pr.debug("channel number out of range:", header.ChannelNumber)
+	}
+	if header.PacketByteCount == 0x7FFF {
+		fmt.Println("Byte count is 0x7FFF/0xFFFF; Error?")
+		if header.SequenceNumber == 0xFF {
+			fmt.Println("Sequence number is 0xFF; Error?")
+		}
+		return false
+	}
+	return header.DataLength > 0
+}

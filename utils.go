@@ -19,26 +19,26 @@ func elapsedTime(startTime time.Time) time.Duration {
 	return time.Now().Sub(startTime)
 }
 
-// separateBatch takes a packet and separates it into individual reports, appending them to the provided reports.
+// separateBatch takes a Packet and separates it into individual reports, appending them to the provided reports.
 //
 // Parameters:
 //
-//	packet: The packet to separate into reports.
+//	Packet: The Packet to separate into reports.
 //	reports: A pointer to a slice of slices where the separated reports will be appended.
 //
 // Returns:
 //
-// An error if the packet cannot be processed due to insufficient bytes or other issues.
-func separateBatch(packet *packet, reports *[]*report) error {
-	// Check if the packet is nil
+// An error if the Packet cannot be processed due to insufficient bytes or other issues.
+func separateBatch(packet *Packet, reports *[]*report) error {
+	// Check if the Packet is nil
 	if packet == nil {
 		return ErrNilPacket
 	}
 
-	// Ensure the packet has a valid header
+	// Ensure the Packet has a valid header
 	nextByteIndex := 0
 	for nextByteIndex < packet.Header.DataLength {
-		// Check if there are enough bytes left in the packet to read the report ID
+		// Check if there are enough bytes left in the Packet to read the report ID
 		reportID := packet.Data[nextByteIndex]
 		requiredBytes := reportLength(reportID)
 		unprocessedByteCount := packet.Header.DataLength - nextByteIndex
