@@ -1,4 +1,4 @@
-package go_adafruit_bno055
+package go_adafruit_bno08x
 
 import (
 	"math"

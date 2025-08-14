@@ -1,4 +1,4 @@
-package go_adafruit_bno055
+package go_adafruit_bno08x
 
 /*
 SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
