@@ -49,7 +49,7 @@ type (
 		dcdSavedAt                float64
 		meCalibrationStartedAt    float64
 		calibrationComplete       bool
-		magnetometerAccuracy      int
+		magnetometerAccuracy      ReportAccuracyStatus
 		waitForInitialize         bool
 		initComplete              bool
 		idRead                    bool
@@ -123,7 +123,7 @@ func NewBNO08X(
 		dcdSavedAt:                -1.0,
 		meCalibrationStartedAt:    -1.0,
 		calibrationComplete:       false,
-		magnetometerAccuracy:      0,
+		magnetometerAccuracy:      ReportAccuracyStatusUnreliable,
 		waitForInitialize:         true,
 		initComplete:              false,
 		idRead:                    false,
@@ -1055,7 +1055,7 @@ func (b *BNO08X) BeginCalibration() {
 // Returns:
 //
 // An integer representing the calibration status, where 0 indicates no calibration needed,
-func (b *BNO08X) CalibrationStatus() int {
+func (b *BNO08X) CalibrationStatus() ReportAccuracyStatus {
 	// Get the status of the self-calibration
 	params := []byte{
 		0, // calibrate accel
@@ -1070,6 +1070,17 @@ func (b *BNO08X) CalibrationStatus() int {
 	}
 	b.sendMeCommand(params)
 	return b.magnetometerAccuracy
+}
+
+// IsCalibrated checks if the BNO08X sensor accuracy status is medium or high.
+//
+// Returns:
+//
+// A boolean indicating whether the sensor is calibrated (medium or high accuracy).
+func (b *BNO08X) IsCalibrated() bool {
+	// Check if the sensor is calibrated
+	calibrationStatus := b.CalibrationStatus()
+	return calibrationStatus == ReportAccuracyStatusMedium || calibrationStatus == ReportAccuracyStatusHigh
 }
 
 // sendMeCommand sends a command to the BNO08X sensor using the ME command protocol.

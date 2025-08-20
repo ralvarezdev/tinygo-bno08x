@@ -351,14 +351,6 @@ var (
 		ReportIDRawMagnetometer:           SensorReportRawMagnetometer,
 	}
 
-	// ReportAccuracyStatus is a list of accuracy status strings
-	ReportAccuracyStatus = []string{
-		"Accuracy Unreliable",
-		"Low Accuracy",
-		"Medium Accuracy",
-		"High Accuracy",
-	}
-
 	// Activities is a list of activity strings
 	Activities = []string{
 		"Unknown",

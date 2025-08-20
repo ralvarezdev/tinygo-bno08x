@@ -23,18 +23,18 @@ type (
 	sensorReportData struct {
 		Count    int
 		Results  []float64
-		Accuracy int
+		Accuracy ReportAccuracyStatus
 	}
 
 	// threeDimensionalReport represents a 3D sensor report
 	threeDimensionalReport struct {
-		Accuracy int
+		Accuracy ReportAccuracyStatus
 		Results  [3]float64
 	}
 
 	// FourDimensionalReport represents a 4D sensor report
 	fourDimensionalReport struct {
-		Accuracy int
+		Accuracy ReportAccuracyStatus
 		Results  [4]float64
 	}
 
@@ -92,6 +92,16 @@ type (
 		MostLikelyClassification string
 		Classifications          map[string]int
 	}
+
+	// ReportAccuracyStatus is an enumeration of accuracy status values
+	ReportAccuracyStatus int
+)
+
+const (
+	ReportAccuracyStatusUnreliable ReportAccuracyStatus = iota
+	ReportAccuracyStatusLow
+	ReportAccuracyStatusMedium
+	ReportAccuracyStatusHigh
 )
 
 // newReport creates a new report from the Packet data.
@@ -532,7 +542,7 @@ func newSensorReportData(report *report) (*sensorReportData, error) {
 	}
 
 	// Get the accuracy and results from the report bytes
-	accuracy := int((report.Data)[2] & 0b11)
+	accuracy := ReportAccuracyStatus((report.Data)[2] & 0b11)
 	results := make([]float64, 0, count)
 
 	for offsetIdx := 0; offsetIdx < count; offsetIdx++ {
