@@ -4,6 +4,7 @@ SPDX-FileCopyrightText: 2019 Kattni Rembor for Adafruit Industries
 
 SPDX-License-Identifier: CC-BY-4.0
 -->
+
 # Adafruit Community Code of Conduct
 
 ## Our Pledge
@@ -94,18 +95,18 @@ you should also report the message directly to Discord.
 These are the steps for upholding our community’s standards of conduct.
 
 1. Any member of the community may report any situation that violates the
-Adafruit Community Code of Conduct. All reports will be reviewed and
-investigated.
+   Adafruit Community Code of Conduct. All reports will be reviewed and
+   investigated.
 2. If the behavior is an egregious violation, the community member who
-committed the violation may be banned immediately, without warning.
+   committed the violation may be banned immediately, without warning.
 3. Otherwise, moderators will first respond to such behavior with a warning.
 4. Moderators follow a soft "three strikes" policy - the community member may
-be given another chance, if they are receptive to the warning and change their
-behavior.
+   be given another chance, if they are receptive to the warning and change their
+   behavior.
 5. If the community member is unreceptive or unreasonable when warned by a
-moderator, or the warning goes unheeded, they may be banned for a first or
-second offense. Repeated offenses will result in the community member being
-banned.
+   moderator, or the warning goes unheeded, they may be banned for a first or
+   second offense. Repeated offenses will result in the community member being
+   banned.
 
 ## Scope
 

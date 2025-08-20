@@ -2,6 +2,7 @@ package go_adafruit_bno08x
 
 import (
 	"fmt"
+
 	"machine"
 )
 

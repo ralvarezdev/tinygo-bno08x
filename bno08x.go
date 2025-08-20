@@ -3,8 +3,10 @@ package go_adafruit_bno08x
 import (
 	"encoding/binary"
 	"fmt"
-	"machine"
+	"math"
 	"time"
+
+	"machine"
 )
 
 /*
@@ -736,6 +738,49 @@ func (b *BNO08X) Quaternion() *[4]float64 {
 	return b.rotationVector
 }
 
+// QuaternionEulerDegrees returns the current rotation vector as Euler angles in degrees.
+//
+// Returns:
+//
+// A tuple of three float64 values representing the roll, pitch, and yaw angles in degrees.
+func (b *BNO08X) QuaternionEulerDegrees() *[3]float64 {
+	// Get the quaternion readings
+	b.Quaternion()
+
+	// Get the quaternion components
+	x := b.rotationVector[0]
+	y := b.rotationVector[1]
+	z := b.rotationVector[2]
+	w := b.rotationVector[3]
+
+	// Roll (X axis)
+	sinRollCosPitch := 2 * (w*x + y*z)
+	cosRollCosPitch := 1 - 2*(x*x+y*y)
+	roll := math.Atan2(sinRollCosPitch, cosRollCosPitch)
+
+	// Pitch (Y axis)
+	sinPitch := 2 * (w*y - z*x)
+	var pitch float64
+	if sinPitch >= 1 {
+		pitch = math.Pi / 2
+	} else if sinPitch <= -1 {
+		pitch = -math.Pi / 2
+	} else {
+		pitch = math.Asin(sinPitch)
+	}
+
+	// Yaw (Z axis)
+	sinYawCosPitch := 2 * (w*z + x*y)
+	cosYawCosPitch := 1 - 2*(y*y+z*z)
+	yaw := math.Atan2(sinYawCosPitch, cosYawCosPitch)
+
+	return &[3]float64{
+		roll * 180 / math.Pi,
+		pitch * 180 / math.Pi,
+		yaw * 180 / math.Pi,
+	}
+}
+
 // GeomagneticQuaternion returns a pointer to a [4]float64 array representing the current geomagnetic rotation vector as a quaternion.
 //
 // Returns:
@@ -806,6 +851,24 @@ func (b *BNO08X) Gravity() *[3]float64 {
 func (b *BNO08X) Gyro() *[3]float64 {
 	b.processAvailablePackets(nil)
 	return b.gyroscope
+}
+
+// GyroDegrees returns Gyro's rotation measurements on the X, Y, and Z axes in degrees per second.
+//
+// Returns:
+//
+// A pointer to a [3]float64 array containing the gyroscope values in degrees.
+func (b *BNO08X) GyroDegrees() *[3]float64 {
+	// Get the gyroscope readings
+	b.Gyro()
+
+	// Convert radians to degrees
+	gyroDegrees := [3]float64{
+		b.gyroscope[0] * (180.0 / math.Pi),
+		b.gyroscope[1] * (180.0 / math.Pi),
+		b.gyroscope[2] * (180.0 / math.Pi),
+	}
+	return &gyroDegrees
 }
 
 // Shake returns true if a shake was detected on any axis since the last time it was checked.
