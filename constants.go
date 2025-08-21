@@ -161,6 +161,15 @@ const (
 
 	// I2CFrequency is the I2C bus frequency in Hz
 	I2CFrequency = 400000 // 400 kHz
+
+	// QuaternionRollIndex is the index for the roll component in a quaternion
+	QuaternionRollIndex = 0
+
+	// QuaternionPitchIndex is the index for the pitch component in a quaternion
+	QuaternionPitchIndex = 1
+
+	// QuaternionYawIndex is the index for the yaw component in a quaternion
+	QuaternionYawIndex = 2
 )
 
 var (
