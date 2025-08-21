@@ -11,7 +11,7 @@ type (
 		GetSequenceNumber(channel uint8) (uint8, error)
 		SetSequenceNumber(channel uint8, sequenceNumber uint8) error
 		IncrementReportSequenceNumber(reportID uint8)
-		GetReportSequenceNumber(reportID uint8) int
+		GetReportSequenceNumber(reportID uint8) uint8
 	}
 
 	// DefaultDataBuffer is a default implementation of the DataBuffer interface

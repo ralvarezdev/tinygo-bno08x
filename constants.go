@@ -157,7 +157,7 @@ const (
 	CommandBufferSize = 12
 
 	// I2CDefaultAddress is the default I2C address for the BNO08x sensor
-	I2CDefaultAddress uint8 = 0x4A
+	I2CDefaultAddress uint16 = 0x4A
 
 	// I2CFrequency is the I2C bus frequency in Hz
 	I2CFrequency = 400000 // 400 kHz

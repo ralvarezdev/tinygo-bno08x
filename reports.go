@@ -696,7 +696,7 @@ func isSensorReport(reportID uint8) bool {
 func insertCommandRequestReport(
 	command uint8,
 	buffer *[]byte,
-	nextSequenceNumber int,
+	nextSequenceNumber uint8,
 	commandParameters *[]byte,
 ) error {
 	// Check if the provided buffer is nil
