@@ -22,8 +22,8 @@ type (
 	}
 )
 
-// newDefaultDataBuffer creates a new DefaultDataBuffer instance
-func newDefaultDataBuffer() *DefaultDataBuffer {
+// NewDefaultDataBuffer creates a new DefaultDataBuffer instance
+func NewDefaultDataBuffer() *DefaultDataBuffer {
 	return &DefaultDataBuffer{
 		data:                    &[]byte{},
 		sequenceNumber:          make([]uint8, 6), // Assuming 6 channels
