@@ -1,11 +1,5 @@
 package go_adafruit_bno08x
 
-/*
-SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
-
-SPDX-License-Identifier: MIT
-*/
-
 var (
 	// Channels contains the channel IDs and their names
 	Channels = map[uint8]string{

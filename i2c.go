@@ -6,12 +6,6 @@ import (
 	"machine"
 )
 
-/*
-SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
-
-SPDX-License-Identifier: MIT
-*/
-
 type (
 	// I2C is the I2C implementation of the BNO08X sensor.
 	I2C struct {

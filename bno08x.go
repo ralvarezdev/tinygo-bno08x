@@ -10,12 +10,6 @@ import (
 )
 
 /*
-SPDX-FileCopyrightText: Copyright (c) 2020 Bryan Siepert for Adafruit Industries
-
-SPDX-License-Identifier: MIT
-*/
-
-/*
 Reset reasons from ID Report response:
 0 – Not Applicable
 1 – Power On Reset
@@ -990,7 +984,7 @@ func (b *BNO08X) EnableFeature(featureID uint8) error {
 
 	// Check if the feature has a dependency
 	featureDependency, ok := RawReports[featureID]
-	if ok && b.isFeatureEnabled(featureDependency) {
+	if ok && b.IsFeatureEnabled(featureDependency) {
 		b.debug("Enabling feature dependency:", featureDependency)
 		if err := b.EnableFeature(featureDependency); err != nil {
 			return err
@@ -1011,14 +1005,14 @@ func (b *BNO08X) EnableFeature(featureID uint8) error {
 		b.processAvailablePackets(&maxPackets)
 
 		// Check if the feature is enabled (update this check as needed for your readings map)
-		if b.isFeatureEnabled(featureID) {
+		if b.IsFeatureEnabled(featureID) {
 			return nil
 		}
 	}
 	return fmt.Errorf("was not able to enable feature %d", featureID)
 }
 
-// Is FeatureEnabled checks if a specific feature is enabled on the BNO08X sensor.
+// IsFeatureEnabled checks if a specific feature is enabled on the BNO08X sensor.
 //
 // Parameters:
 //
@@ -1027,7 +1021,7 @@ func (b *BNO08X) EnableFeature(featureID uint8) error {
 // Returns:
 //
 //	A boolean indicating whether the feature is enabled.
-func (b *BNO08X) isFeatureEnabled(featureID uint8) bool {
+func (b *BNO08X) IsFeatureEnabled(featureID uint8) bool {
 	_, ok := b.enabledFeatures[featureID]
 	return ok
 }
