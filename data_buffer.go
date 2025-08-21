@@ -1,3 +1,5 @@
+//go:build tinygo && (rp2040 || rp2350)
+
 package go_adafruit_bno08x
 
 type (
