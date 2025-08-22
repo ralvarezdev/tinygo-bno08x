@@ -196,7 +196,7 @@ func (pw I2CPacketWriter) SendPacket(channel uint8, data []byte) (
 	pw.debug(packet)
 
 	// Write to I2C
-	if err = pw.i2cBus.Write(pw.address, dataBufferWriteLength); err != nil {
+	if err = pw.i2cBus.Tx(pw.address, dataBufferWriteLength, nil); err != nil {
 		return sequenceNumber, err
 	}
 
@@ -256,8 +256,16 @@ func (pr I2CPacketReader) debug(args ...interface{}) {
 //
 // A pointer to a PacketHeader or an error if reading the header fails.
 func (pr I2CPacketReader) readHeader() (*PacketHeader, error) {
+	// Ensure the data buffer is at least 4 bytes long to read the header
+	bufPtr := pr.dataBuffer.GetData()
+	if len(*buf) < 4 {
+		newBuf := make([]byte, 4)
+		pr.dataBuffer.SetData(&newBuf)
+		bufPtr = &newBuf
+	}
+
 	// Read the first 4 bytes from the I2C bus to get the Packet header.
-	if err := pr.i2cBus.Read(pr.address, pr.dataBuffer); err != nil {
+	if err := pr.i2cBus.Tx(pr.address, nil, pr.dataBuffer[:4]); err != nil {
 		return nil, err
 	}
 	header, err := NewPacketHeader(pr.dataBuffer.GetData())
@@ -270,13 +278,11 @@ func (pr I2CPacketReader) readHeader() (*PacketHeader, error) {
 
 func (pr I2CPacketReader) ReadPacket() (*Packet, error) {
 	// Read the Packet header first
-	if err := pr.i2cBus.Read(pr.address, pr.dataBuffer); err != nil {
-		return nil, err
-	}
-	header, err := NewPacketHeader(pr.dataBuffer.GetData())
+	header, err := pr.readHeader()
 	if err != nil {
 		return nil, err
 	}
+
 	packetByteCount := header.PacketByteCount
 	channelNumber := header.ChannelNumber
 	sequenceNumber := header.SequenceNumber
@@ -292,17 +298,19 @@ func (pr I2CPacketReader) ReadPacket() (*Packet, error) {
 		pr.debug("SKIPPING NO PACKETS AVAILABLE IN i2c.readPacket")
 		return nil, ErrNoPacketAvailable
 	}
-	packetByteCount -= 4
+
+	// packetByteCount includes 4 header bytes
+	payloadLen := packetByteCount - 4
 	pr.debug(
 		"channel",
 		channelNumber,
 		"has",
-		packetByteCount,
+		payloadLen,
 		"bytes available to read",
 	)
 
 	// Read the remaining bytes of the Packet
-	if err = pr.read(packetByteCount); err != nil {
+	if err = pr.read(packpayloadLen); err != nil {
 		return nil, fmt.Errorf("failed to read Packet data: %w", err)
 	}
 
@@ -343,11 +351,16 @@ func (pr I2CPacketReader) read(requestedReadLength int) error {
 		)
 	}
 	dataBuffer := pr.dataBuffer.GetData()
-	if err := pr.i2cBus.Read(
-		pr.address,
-		(*dataBuffer)[:totalReadLength],
-	); err != nil {
-		return err
+
+	// Preserve first 4 header bytes already read; read payload into slice after header.
+	if requestedReadLength > 0 {
+		if err := pr.i2cBus.Tx(
+			pr.address,
+			nil,
+			(*dataBuffer)[4:totalReadLength],
+		); err != nil {
+			return err
+		}
 	}
 	return nil
 }

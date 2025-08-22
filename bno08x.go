@@ -38,7 +38,7 @@ type (
 		packetReader              PacketReader
 		packetWriter              PacketWriter
 		debugger                  Debugger
-		reset                     *machine.PinOutput
+		reset                     *machine.Pin
 		dataBuffer                DataBuffer
 		commandBuffer             []byte
 		packetSlices              []*report
@@ -71,7 +71,7 @@ type (
 	// Options struct holds configuration options for the BNO08X instance
 	Options struct {
 		Debugger Debugger // Debugger instance for debug messages
-		Reset    *machine.PinOutput
+		Reset    *machine.Pin
 	}
 )
 
