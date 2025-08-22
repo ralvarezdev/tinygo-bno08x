@@ -12,13 +12,13 @@ type (
 	// I2C is the I2C implementation of the BNO08X sensor.
 	I2C struct {
 		BNO08X
-		i2cBus  machine.I2C
+		i2cBus  *machine.I2C
 		address uint16
 	}
 
 	// I2CPacketReader represents the Packet reader for the I2C interface.
 	I2CPacketReader struct {
-		i2cBus     machine.I2C
+		i2cBus     *machine.I2C
 		dataBuffer DataBuffer
 		debugger   Debugger
 		address    uint16 // I2C address of the device
@@ -26,7 +26,7 @@ type (
 
 	// I2CPacketWriter represents the Packet writer for the I2C interface.
 	I2CPacketWriter struct {
-		i2cBus     machine.I2C
+		i2cBus     *machine.I2C
 		dataBuffer DataBuffer
 		debugger   Debugger
 		address    uint16 // I2C address of the device
@@ -50,13 +50,18 @@ type (
 //
 // A pointer to a new I2C instance or an error if initialization fails.
 func NewI2C(
-	i2cBus machine.I2C,
+	i2cBus *machine.I2C,
 	sdaPin machine.Pin,
 	sclPin machine.Pin,
 	address uint16,
 	dataBuffer DataBuffer,
 	options *Options,
 ) (*I2C, error) {
+	// Check if the I2C bus is nil
+	if i2cBus == nil {
+		return nil, ErrNilI2CBus
+	}
+
 	// Configure the I2C bus
 	i2cBus.Configure(
 		machine.I2CConfig{
@@ -119,11 +124,16 @@ func NewI2C(
 //
 // A pointer to a new I2CPacketWriter instance, or an error if the dataBuffer is nil.
 func newI2CPacketWriter(
-	i2cBus machine.I2C,
+	i2cBus *machine.I2C,
 	address uint16,
 	dataBuffer DataBuffer,
 	debugger Debugger,
 ) (*I2CPacketWriter, error) {
+	// Check if the I2C bus is nil
+	if i2cBus == nil {
+		return nil, ErrNilI2CBus
+	}
+
 	// Check if the dataBuffer is provided
 	if dataBuffer == nil {
 		return nil, ErrNilDataBuffer
@@ -221,11 +231,16 @@ func (pw I2CPacketWriter) SendPacket(channel uint8, data []byte) (
 //
 // A pointer to a new I2CPacketReader instance.
 func newI2CPacketReader(
-	i2cBus machine.I2C,
+	i2cBus *machine.I2C,
 	address uint16,
 	dataBuffer DataBuffer,
 	debugger Debugger,
 ) (*I2CPacketReader, error) {
+	// Check if the I2C bus is nil
+	if i2cBus == nil {
+		return nil, ErrNilI2CBus
+	}
+
 	// Check if the dataBuffer is provided
 	if dataBuffer == nil {
 		return nil, ErrNilDataBuffer

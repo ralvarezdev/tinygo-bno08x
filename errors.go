@@ -29,4 +29,5 @@ var (
 	ErrInvalidReportIDForFourDimensionalParsing  = errors.New("invalid report ID for four-dimensional parsing")
 	ErrInvalidChannel                            = errors.New("invalid channel number provided")
 	ErrNoPacketAvailable                         = errors.New("no Packet available to read from the I2C bus")
+	ErrNilI2CBus                                 = errors.New("nil I2C bus provided for communication")
 )
