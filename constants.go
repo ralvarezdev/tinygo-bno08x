@@ -1,6 +1,6 @@
 //go:build tinygo && (rp2040 || rp2350)
 
-package go_adafruit_bno08x
+package go_bno08x
 
 import (
 	"math"
@@ -9,100 +9,61 @@ import (
 
 const (
 	// ChannelSHTPCommand is the channel for SHTP commands
-	ChannelSHTPCommand uint8 = 0
+	ChannelSHTPCommand uint8 = 0x0
 
 	// ChannelExe is the channel for execution commands
-	ChannelExe uint8 = 1
+	ChannelExe uint8 = 0x1
 
-	// ChannelCONTROL is the channel for control commands
-	ChannelCONTROL uint8 = 2
+	// ChannelControl is the channel for control commands
+	ChannelControl uint8 = 0x2
 
 	// ChannelInputSensorReports is the channel for input sensor reports
-	ChannelInputSensorReports uint8 = 3
+	ChannelInputSensorReports uint8 = 0x3
 
 	// ChannelWakeInputSensorReports is the channel for wake input sensor reports
-	ChannelWakeInputSensorReports uint8 = 4
+	ChannelWakeInputSensorReports uint8 = 0x4
 
 	// ChannelGyroRotationVector is the channel for the gyroscope rotation vector
-	ChannelGyroRotationVector uint8 = 5
+	ChannelGyroRotationVector uint8 = 0x5
 
-	// ReportIDGetFeatureRequest is the report ID for the Get Feature request.
-	ReportIDGetFeatureRequest uint8 = 0xFE
+	// CommandReset is the command to reset the BNO08x sensor
+	CommandReset uint8 = 0x1
 
-	// ReportIDSetFeatureCommand is the command ID for setting a feature.
-	ReportIDSetFeatureCommand uint8 = 0xFD
+	// SaveDynamicCalibrationData is the command to save the dynamic calibration data
+	SaveDynamicCalibrationData uint8 = 0x6
 
-	// ReportIDGetFeatureResponse is the report ID for the Get Feature request.
-	ReportIDGetFeatureResponse uint8 = 0xFC
+	// MagnetometerCalibration is the command for magnetometer calibration
+	MagnetometerCalibration uint8 = 0x7
 
-	// ReportIDBaseTimestamp is the report ID for the base timestamp.
-	ReportIDBaseTimestamp uint8 = 0xFB
+	// MagnetometerCalibrationConfig is the command to configure the calibration settings
+	MagnetometerCalibrationConfig uint8 = 0x0
 
-	// ReportIDTimestampRebase is the report ID for the timestamp rebase.
-	ReportIDTimestampRebase uint8 = 0xFA
-
-	// ReportIDSHTPReportProductIDResponse is the report ID for the SHTP report product ID response.
-	ReportIDSHTPReportProductIDResponse uint8 = 0xF8
-
-	// ReportIDSHTPReportProductIDRequest is the report ID for the SHTP report product ID request.
-	ReportIDSHTPReportProductIDRequest uint8 = 0xF9
-
-	// ReportIDFRSWriteRequest is the report ID for the FRS (Feature Request Service) write request.
-	ReportIDFRSWriteRequest uint8 = 0xF7
-
-	// ReportIDFRSWriteData is the report ID for the FRS write data.
-	ReportIDFRSWriteData uint8 = 0xF6
-
-	// ReportIDFRSWriteResponse is the report ID for the FRS write response.
-	ReportIDFRSWriteResponse uint8 = 0xF5
-
-	// ReportIDFRSReadRequest is the report ID for the FRS read request.
-	ReportIDFRSReadRequest uint8 = 0xF4
-
-	// ReportIDFRSReadResponse is the report ID for the FRS read response.
-	ReportIDFRSReadResponse uint8 = 0xF3
-
-	// ReportIDCommandRequest is the report ID for command requests
-	ReportIDCommandRequest uint8 = 0xF2
-
-	// ReportIDCommandResponse is the report ID for command responses
-	ReportIDCommandResponse uint8 = 0xF1
-
-	// SaveDCD is the command to save the DCD (Device Configuration Data)
-	SaveDCD uint8 = 0x6
-
-	// MECalibrate is the command to calibrate the sensor
-	MECalibrate uint8 = 0x7
-
-	// MECalibrationConfig is the command to configure the calibration settings
-	MECalibrationConfig uint8 = 0x00
-
-	// MEGetCalibration is the command to get the calibration data
-	MEGetCalibration uint8 = 0x01
+	// MagnetometerGetCalibration is the command to get the calibration data
+	MagnetometerGetCalibration uint8 = 0x1
 
 	// ReportIDAccelerometer is the report ID for calibrated acceleration (m/s2)
-	ReportIDAccelerometer uint8 = 0x01
+	ReportIDAccelerometer uint8 = 0x1
 
 	// ReportIDGyroscope is the report ID for calibrated gyroscope (rad/s).
-	ReportIDGyroscope uint8 = 0x02
+	ReportIDGyroscope uint8 = 0x2
 
 	// ReportIDMagnetometer is the report ID for magnetic field calibrated (in µTesla). The fully calibrated magnetic field measurement
-	ReportIDMagnetometer uint8 = 0x03
+	ReportIDMagnetometer uint8 = 0x3
 
 	// ReportIDLinearAcceleration is the report ID for linear acceleration (m/s2). Acceleration of the device with gravity removed
-	ReportIDLinearAcceleration uint8 = 0x04
+	ReportIDLinearAcceleration uint8 = 0x4
 
 	// ReportIDRotationVector is the report ID for rotation vector
-	ReportIDRotationVector uint8 = 0x05
+	ReportIDRotationVector uint8 = 0x5
 
 	// ReportIDGravity is the report ID for gravity vector (m/s2). Vector direction of gravity
-	ReportIDGravity uint8 = 0x06
+	ReportIDGravity uint8 = 0x6
 
 	// ReportIDGameRotationVector is the report ID for game rotation vector
-	ReportIDGameRotationVector uint8 = 0x08
+	ReportIDGameRotationVector uint8 = 0x8
 
 	// ReportIDGeomagneticRotationVector is the report ID for geomagnetic rotation vector
-	ReportIDGeomagneticRotationVector uint8 = 0x09
+	ReportIDGeomagneticRotationVector uint8 = 0x9
 
 	// ReportIDStepCounter is the report ID for the step counter.
 	ReportIDStepCounter uint8 = 0x11
@@ -125,11 +86,56 @@ const (
 	// ReportIDActivityClassifier is the report ID for the activity classifier.
 	ReportIDActivityClassifier uint8 = 0x1E
 
+	// ReportIDCommandResponse is the report ID for command responses
+	ReportIDCommandResponse uint8 = 0xF1
+
+	// ReportIDCommandRequest is the report ID for command requests
+	ReportIDCommandRequest uint8 = 0xF2
+
+	// ReportIDFRSReadResponse is the report ID for the FRS read response.
+	ReportIDFRSReadResponse uint8 = 0xF3
+
+	// ReportIDFRSReadRequest is the report ID for the FRS read request.
+	ReportIDFRSReadRequest uint8 = 0xF4
+
+	// ReportIDFRSWriteResponse is the report ID for the FRS write response.
+	ReportIDFRSWriteResponse uint8 = 0xF5
+
+	// ReportIDFRSWriteData is the report ID for the FRS write data.
+	ReportIDFRSWriteData uint8 = 0xF6
+
+	// ReportIDFRSWriteRequest is the report ID for the FRS (Feature Request Service) write request.
+	ReportIDFRSWriteRequest uint8 = 0xF7
+
+	// ReportIDProductIDResponse is the report ID for the report product ID response.
+	ReportIDProductIDResponse uint8 = 0xF8
+
+	// ReportIDProductIDRequest is the report ID for the report product ID request.
+	ReportIDProductIDRequest uint8 = 0xF9
+
+	// ReportIDTimestampRebase is the report ID for the timestamp rebase.
+	ReportIDTimestampRebase uint8 = 0xFA
+
+	// ReportIDBaseTimestamp is the report ID for the base timestamp.
+	ReportIDBaseTimestamp uint8 = 0xFB
+
+	// ReportIDGetFeatureResponse is the report ID for the Get Feature request.
+	ReportIDGetFeatureResponse uint8 = 0xFC
+
+	// ReportIDSetFeatureCommand is the command ID for setting a feature.
+	ReportIDSetFeatureCommand uint8 = 0xFD
+
+	// ReportIDGetFeatureRequest is the report ID for the Get Feature request.
+	ReportIDGetFeatureRequest uint8 = 0xFE
+
 	// ReportIDGyroscopeIntegratedRotationVector is the report ID for the gyroscope integrated rotation vector.
 	ReportIDGyroscopeIntegratedRotationVector uint8 = 0x2A
 
 	// DefaultReportInterval is the default report interval in microseconds
-	DefaultReportInterval uint32 = 50000
+	DefaultReportInterval uint32 = 60_000
+
+	// DebugReportInterval is the debug report interval in microseconds
+	DebugReportInterval uint32 = 1_000_000
 
 	// QuaternionReadTimeout is the timeout for reading quaternion data in seconds
 	QuaternionReadTimeout float32 = 0.500
@@ -138,13 +144,10 @@ const (
 	PacketReadTimeout float32 = 2.000
 
 	// FeatureEnableTimeout is the timeout for enabling features in seconds
-	FeatureEnableTimeout = 2.0 * time.Second
+	FeatureEnableTimeout = 5.0 * time.Second
 
 	// DefaultTimeout is the default timeout for operations in seconds
 	DefaultTimeout = 2.0 * time.Second
-
-	// CommandReset is the command to reset the BNO08x sensor
-	CommandReset uint8 = 0x01
 
 	// PacketHeaderLength is the length of the Packet header in bytes
 	PacketHeaderLength int = 4
@@ -158,23 +161,98 @@ const (
 	// CommandBufferSize is the size of the command buffer
 	CommandBufferSize = 12
 
+	// ResetPacketDelay is the delay after sending a reset command
+	ResetPacketDelay = 100 * time.Millisecond
+
+	// InitializeAttempts is the number of attempts to initialize the sensor
+	InitializeAttempts = 3
+
+	// CheckIDDelay is the delay after checking the sensor ID
+	CheckIDDelay = 500 * time.Millisecond
+
+	// DefaultWaitForPacketTypeTimeout is the default timeout for waiting for a specific packet type in seconds
+	DefaultWaitForPacketTypeTimeout = 5 * time.Second
+
+	// DefaultMaxPackets is the default maximum number of packets to read when waiting for a specific packet type
+	DefaultMaxPackets = 25
+
 	// I2CDefaultAddress is the default I2C address for the BNO08x sensor
 	I2CDefaultAddress uint16 = 0x4A
 
+	// I2CAlternativeAddress is the alternative I2C address for the BNO08x sensor
+	I2CAlternativeAddress uint16 = 0x4B
+
 	// I2CFrequency is the I2C bus frequency in Hz
-	I2CFrequency = 400000 // 400 kHz
+	I2CFrequency = 400_000 // 400 kHz
 
-	// QuaternionRollIndex is the index for the roll component in a quaternion
-	QuaternionRollIndex = 0
+	// I2CSetupDelay is the delay after setting up the I2C bus
+	I2CSetupDelay = 100 * time.Millisecond
 
-	// QuaternionPitchIndex is the index for the pitch component in a quaternion
-	QuaternionPitchIndex = 1
+	// I2CProbeDeviceAttempts is the number of attempts to probe the device on the I2C bus
+	I2CProbeDeviceAttempts = 5
 
-	// QuaternionYawIndex is the index for the yaw component in a quaternion
-	QuaternionYawIndex = 2
+	// I2CProbeDeviceDelay is the delay between attempts to probe the device on the I2C bus
+	I2CProbeDeviceDelay = 50 * time.Millisecond
+
+	// UARTBaudRate is the baud rate for UART communication
+	UARTBaudRate uint32 = 3_000_000 // 3Mbps for UART-SHTP
+
+	// UARTRVCBaudRate is the baud rate for UART-RVC communication
+	UARTRVCBaudRate uint32 = 115_200 // 115200 for UART-RVC
+
+	// UARTStartAndEndByte is the start byte and end byte for UART communication
+	UARTStartAndEndByte = 0x7E
+
+	// UARTSHTPByte is the SHTP byte for UART communication
+	UARTSHTPByte = 0x01
+
+	// UARTControlEscape is the control escape byte for UART communication
+	UARTControlEscape = 0x7D
+
+	// UARTByteTimeout is the timeout for reading a byte from UART communication in milliseconds
+	UARTByteTimeout = 250 * time.Millisecond
+
+	// UARTRVCStartByte is the start byte for UART-RVC communication
+	UARTRVCStartByte = 0xAA
+
+	// UARTRVCHeaderLength is the length of the UART-RVC header in bytes
+	UARTRVCHeaderLength = 2
+
+	// UARTRVCPacketLengthBytes is the number of length bytes in a UART-RVC packet
+	UARTRVCPacketLengthBytes = 19
+
+	// EulerDegreesRollIndex is the index for the roll component in an euler degrees vector
+	EulerDegreesRollIndex = 0
+
+	// EulerDegreesPitchIndex is the index for the pitch component in an euler degrees vector
+	EulerDegreesPitchIndex = 1
+
+	// EulerDegreesYawIndex is the index for the yaw component in an euler degrees vector
+	EulerDegreesYawIndex = 2
+
+	// ThreeDimensionalXIndex is the index for the X component in a three-dimensional vector
+	ThreeDimensionalXIndex = 0
+
+	// ThreeDimensionalYIndex is the index for the Y component in a three-dimensional vector
+	ThreeDimensionalYIndex = 1
+
+	// ThreeDimensionalZIndex is the index for the Z component in a three-dimensional vector
+	ThreeDimensionalZIndex = 2
+
+	// DebugHeader is the header for debug messages
+	DebugHeader = "[BNO08x]"
+
+	// Gravity is the standard gravity in m/s^2
+	Gravity = 9.80665
+
+	// MilligToMeterPerSecondSquared is the conversion factor from millig to meters per second squared
+	MilligToMeterPerSecondSquared = Gravity / 1000.0
 )
 
 var (
+	// ReportIDProductIDRequestData is the report ID for the report product ID request data.
+	ReportIDProductIDRequestData = []byte{ReportIDProductIDRequest, 0}
+
 	// QuaternionScalar is the scalar for quaternion values
 	QuaternionScalar = math.Pow(2, 14*-1)
 
@@ -192,14 +270,14 @@ var (
 
 	// ReportLengths is a map of report IDs to their lengths
 	ReportLengths = map[uint8]int{
-		ReportIDSHTPReportProductIDResponse: 16,
-		ReportIDGetFeatureResponse:          17,
-		ReportIDCommandResponse:             16,
-		ReportIDBaseTimestamp:               5,
-		ReportIDTimestampRebase:             5,
+		ReportIDProductIDResponse:  16,
+		ReportIDGetFeatureResponse: 17,
+		ReportIDCommandResponse:    16,
+		ReportIDBaseTimestamp:      5,
+		ReportIDTimestampRebase:    5,
 	}
 
-	// RawReports are the raw Reports require their counterpart to be enabled
+	// RawReports are the raw SHTPCommandsNames require their counterpart to be enabled
 	RawReports = map[uint8]uint8{
 		ReportIDRawAccelerometer: ReportIDAccelerometer,
 		ReportIDRawGyroscope:     ReportIDGyroscope,

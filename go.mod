@@ -1,3 +1,3 @@
-module github.com/ralvarezdev/go-adafruit-bno08x
+module github.com/ralvarezdev/go-bno08x
 
-go 1.24.5
+go 1.25

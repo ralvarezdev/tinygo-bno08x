@@ -1,19 +1,20 @@
 //go:build tinygo && (rp2040 || rp2350)
 
-package go_adafruit_bno08x
+package go_bno08x
 
 type (
 	// DataBuffer is an interface for managing data buffers
 	DataBuffer interface {
 		GetData() *[]byte
 		SetData(data *[]byte)
-		Clear()
+		ClearData()
 		UpdateSequenceNumber(newPacket *Packet) error
 		IncrementChannelSequenceNumber(channel uint8) (uint8, error)
 		GetSequenceNumber(channel uint8) (uint8, error)
 		SetSequenceNumber(channel uint8, sequenceNumber uint8) error
 		IncrementReportSequenceNumber(reportID uint8)
 		GetReportSequenceNumber(reportID uint8) uint8
+		ResetSequenceNumbers()
 	}
 
 	// DefaultDataBuffer is a default implementation of the DataBuffer interface
@@ -26,30 +27,42 @@ type (
 
 // NewDefaultDataBuffer creates a new DefaultDataBuffer instance
 func NewDefaultDataBuffer() *DefaultDataBuffer {
+	// Initialize the data buffer with a size of DataBufferSize
+	data := make([]byte, DataBufferSize)
+
 	return &DefaultDataBuffer{
-		data:                    &[]byte{},
+		data:                    &data,
 		sequenceNumber:          make([]uint8, 6), // Assuming 6 channels
 		twoEndedSequenceNumbers: make(map[uint8]uint8),
 	}
 }
 
 // GetData returns the data buffer
+//
+// Returns:
+//
+// A pointer to the byte slice representing the data buffer.
 func (db *DefaultDataBuffer) GetData() *[]byte {
 	return db.data
 }
 
 // SetData sets the data buffer
+//
+// Parameters:
+//
+//	data: A pointer to the byte slice to set as the data buffer. If nil, the data buffer is cleared.
 func (db *DefaultDataBuffer) SetData(data *[]byte) {
 	if data == nil {
-		db.data = &[]byte{}
+		db.ClearData()
 	} else {
 		db.data = data
 	}
 }
 
-// Clear clears the data buffer
-func (db *DefaultDataBuffer) Clear() {
-	db.data = &[]byte{}
+// ClearData clears the data buffer
+func (db *DefaultDataBuffer) ClearData() {
+	db.data = new([]byte)
+	*db.data = make([]byte, DataBufferSize)
 }
 
 // UpdateSequenceNumber updates the cached sequence number for the given channel using the provided Packet.
@@ -139,7 +152,10 @@ func (db *DefaultDataBuffer) SetSequenceNumber(
 //
 //	reportID: The ID of the report for which to increment the sequence number.
 func (db *DefaultDataBuffer) IncrementReportSequenceNumber(reportID uint8) {
-	current := db.twoEndedSequenceNumbers[reportID]
+	current, ok := db.twoEndedSequenceNumbers[reportID]
+	if !ok {
+		current = 0
+	}
 	db.twoEndedSequenceNumbers[reportID] = current + 1
 }
 
@@ -153,5 +169,18 @@ func (db *DefaultDataBuffer) IncrementReportSequenceNumber(reportID uint8) {
 //
 //	The current sequence number for the report ID.
 func (db *DefaultDataBuffer) GetReportSequenceNumber(reportID uint8) uint8 {
-	return db.twoEndedSequenceNumbers[reportID]
+	sequenceNumber, ok := db.twoEndedSequenceNumbers[reportID]
+	if !ok {
+		db.sequenceNumber[reportID] = 0
+		return 0
+	}
+	return sequenceNumber
+}
+
+// ResetSequenceNumbers resets sequence numbers
+func (db *DefaultDataBuffer) ResetSequenceNumbers() {
+	for i := range db.sequenceNumber {
+		db.sequenceNumber[i] = 0
+	}
+	db.twoEndedSequenceNumbers = make(map[uint8]uint8)
 }

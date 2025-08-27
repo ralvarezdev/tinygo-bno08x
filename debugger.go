@@ -1,8 +1,11 @@
 //go:build tinygo && (rp2040 || rp2350)
 
-package go_adafruit_bno08x
+package go_bno08x
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type (
 	// Debugger is an interface for debugging messages
@@ -14,8 +17,8 @@ type (
 	DefaultDebugger struct{}
 )
 
-// newDefaultDebugger creates a new DefaultDebugger instance
-func newDefaultDebugger() *DefaultDebugger {
+// NewDefaultDebugger creates a new DefaultDebugger instance
+func NewDefaultDebugger() *DefaultDebugger {
 	return &DefaultDebugger{}
 }
 
@@ -25,7 +28,15 @@ func newDefaultDebugger() *DefaultDebugger {
 //
 //	args: The arguments to print in the debug message
 func (d *DefaultDebugger) Debug(args ...any) {
-	fmt.Print("DBG::\t\t")
-	fmt.Print(args...)
-	fmt.Println()
+	var b strings.Builder
+
+	b.WriteString(DebugHeader)
+	b.WriteString(" ")
+	for i, arg := range args {
+		if i > 0 {
+			b.WriteString("\n ")
+		}
+		b.WriteString(fmt.Sprintf("%v", arg))
+	}
+	fmt.Println(b.String())
 }

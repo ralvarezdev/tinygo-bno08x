@@ -1,6 +1,6 @@
 //go:build tinygo && (rp2040 || rp2350)
 
-package go_adafruit_bno08x
+package go_bno08x
 
 import (
 	"encoding/binary"
@@ -169,9 +169,9 @@ func newReportFromPacketBytes(packetBytes *[]byte) (*report, error) {
 	}
 
 	// Create a new Packet from the Packet bytes
-	packet, err := NewPacket(packetBytes)
+	packet, err := NewPacketFromBuffer(packetBytes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Packet from bytes: %w", err)
+		return nil, fmt.Errorf("failed to create packet from bytes: %w", err)
 	}
 
 	// Create a new report from the Packet
@@ -195,6 +195,30 @@ func newSensorReport(scalar float64, count, reportLength int) *sensorReport {
 		Count:        count,
 		ReportLength: reportLength,
 	}
+}
+
+// newSetFeatureEnableReportData creates a byte slice of the data to enable a feature on the BNO08X sensor.
+//
+// Parameters:
+//
+//	featureID: The ID of the feature to enable.
+//	reportInterval: The interval for reporting (default: DefaultReportInterval).
+//	sensorSpecificConfig: Sensor-specific configuration bits.
+//
+// Returns:
+//
+//	A byte slice representing the feature enable report data.
+func newSetFeatureEnableReportData(
+	featureID uint8,
+	reportInterval uint32,
+	sensorSpecificConfig uint32,
+) []byte {
+	setFeatureReport := make([]byte, 17)
+	setFeatureReport[0] = ReportIDSetFeatureCommand
+	setFeatureReport[1] = featureID
+	binary.LittleEndian.PutUint32(setFeatureReport[5:], reportInterval)
+	binary.LittleEndian.PutUint32(setFeatureReport[13:], sensorSpecificConfig)
+	return setFeatureReport
 }
 
 // newGetFeatureReport creates a new getFeatureReport from the provided report.
@@ -225,7 +249,7 @@ func newGetFeatureReport(report *report) (
 	}
 
 	// Validate the length of the report bytes
-	if len(report.Data) < 19 {
+	if len(report.Data) < 17 {
 		return nil, ErrReportDataTooShort
 	}
 
@@ -368,10 +392,10 @@ func newSensorID(report *report) (*sensorID, error) {
 	}
 
 	// Check if the report ID is valid for a SHTP report product ID response
-	if report.ID != ReportIDSHTPReportProductIDResponse {
+	if report.ID != ReportIDProductIDResponse {
 		return nil, fmt.Errorf(
 			ErrInvalidReportIDForReportParsing,
-			ReportIDSHTPReportProductIDResponse,
+			ReportIDProductIDResponse,
 			report.ID,
 		)
 	}
@@ -666,21 +690,9 @@ func reportLength(reportID uint8) int {
 //
 //	true if the report ID is a control report, false otherwise
 func isControlReport(reportID uint8) bool {
-	return reportID > 0xF0 && reportID < 0xFF
-}
-
-// isSensorReport checks if the report ID is a sensor report.
-//
-// Parameters:
-//
-//	reportID: The ID of the report
-//
-// Returns:
-//
-//	true if the report ID is a sensor report, false otherwise
-func isSensorReport(reportID uint8) bool {
-	// Check if the report ID is less than 0xF0
-	return reportID < 0xF0
+	// Check if the report ID is inside the control channel
+	_, ok := ControlCommandsNames[reportID]
+	return ok
 }
 
 // insertCommandRequestReport inserts a command request report into the provided buffer.
