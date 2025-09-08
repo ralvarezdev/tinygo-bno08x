@@ -1,4 +1,4 @@
-package go_bno08x
+package tinygo_bno08x
 
 type (
 	// BNO08XService is an interface to wrap the BNO08X implementation methods.
