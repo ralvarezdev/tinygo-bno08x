@@ -228,8 +228,8 @@ var (
 	// channelNumberSuffix is the suffix for the channel number in the packet data log
 	channelNumberSuffix = []byte(")")
 
-	// sensorReportIDPrefix is the prefix for the sensor report ID in the packet data log
-	sensorReportIDPrefix = []byte("\t Sensor Report ID: ")
+	// sensorReportPrefix is the prefix for the sensor report in the packet data log
+	sensorReportPrefix = []byte("\t Sensor Report: ")
 
 	// featureIDPrefix is the prefix for the feature ID in the packet data log
 	featureIDPrefix = []byte("\t Feature ID: ")
@@ -801,10 +801,10 @@ func (p *Packet) Log(isBeingSent bool, logHeader bool, logger tinygologger.Logge
 		}
 
 		if !isUnknown {
-			logger.AddMessageWithUint8(sensorReportIDPrefix, sensorReportID, true, false, true)
-			logger.AddMessage(reportNamePrefix, false)
+			logger.AddMessage(sensorReportPrefix, false)
 			logger.AddMessage(sensorReportNameBuffer, false)
-			logger.AddMessage(reportNameSuffix, true)
+			logger.AddMessageWithUint8(reportIDPrefix, sensorReportID, true, false, true)
+			logger.AddMessage(reportIDSuffix, true)
 		}
 	}
 
