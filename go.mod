@@ -1,4 +1,4 @@
-module github.com/ralvarezdev/go-bno08x
+module github.com/ralvarezdev/tinygo-bno08x
 
 go 1.25.0
 
