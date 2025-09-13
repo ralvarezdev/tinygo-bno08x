@@ -5,6 +5,8 @@ package tinygo_bno08x
 import (
 	"math"
 	"time"
+
+	"machine"
 )
 
 const (
@@ -26,8 +28,11 @@ const (
 	// ChannelGyroRotationVector is the channel for the gyroscope rotation vector
 	ChannelGyroRotationVector uint8 = 0x5
 
-	// CommandReset is the command to reset the BNO08x sensor
-	CommandReset uint8 = 0x1
+	// MaxChannelNumber is the maximum valid channel number
+	MaxChannelNumber uint8 = ChannelGyroRotationVector
+
+	// ExecCommandReset is the command to reset the BNO08x sensor
+	ExecCommandReset uint8 = 0x1
 
 	// SaveDynamicCalibrationData is the command to save the dynamic calibration data
 	SaveDynamicCalibrationData uint8 = 0x6
@@ -59,14 +64,26 @@ const (
 	// ReportIDGravity is the report ID for gravity vector (m/s2). Vector direction of gravity
 	ReportIDGravity uint8 = 0x6
 
+	// ReportIDUncalibratedGyroscope is the report ID for uncalibrated gyroscope
+	ReportIDUncalibratedGyroscope uint8 = 0x7
+
 	// ReportIDGameRotationVector is the report ID for game rotation vector
 	ReportIDGameRotationVector uint8 = 0x8
 
 	// ReportIDGeomagneticRotationVector is the report ID for geomagnetic rotation vector
 	ReportIDGeomagneticRotationVector uint8 = 0x9
 
+	// ReportIDUncalibratedMagneticField is the report ID for uncalibrated magnetic field
+	ReportIDUncalibratedMagneticField uint8 = 0x0F
+
+	// ReportIDTapDetector is the report ID for the tap detector.
+	ReportIDTapDetector uint8 = 0x10
+
 	// ReportIDStepCounter is the report ID for the step counter.
 	ReportIDStepCounter uint8 = 0x11
+
+	// ReportIDSignificantMotion is the report ID for significant motion detection.
+	ReportIDSignificantMotion uint8 = 0x12
 
 	// ReportIDStabilityClassifier is the report ID for the stability classifier.
 	ReportIDStabilityClassifier uint8 = 0x13
@@ -80,11 +97,44 @@ const (
 	// ReportIDRawMagnetometer is the report ID for the raw magnetic field measurement (ADC units). Direct data from the magnetometer. Used for testing
 	ReportIDRawMagnetometer uint8 = 0x16
 
+	// ReportIDSAR is the report ID for SAR (Specific Absorption Rate) data.
+	ReportIDSAR uint8 = 0x17
+
+	// ReportIDStepDetector is the report ID for the step detector.
+	ReportIDStepDetector uint8 = 0x18
+
 	// ReportIDShakeDetector is the report ID for the shake detector.
 	ReportIDShakeDetector uint8 = 0x19
 
+	// ReportIDFlipDetector is the report ID for the flip detector.
+	ReportIDFlipDetector uint8 = 0x1A
+
+	// ReportIDPickupDetector is the report ID for the pickup detector.
+	ReportIDPickupDetector uint8 = 0x1B
+
+	// ReportIDStabilityDetector is the report ID for the stability detector.
+	ReportIDStabilityDetector uint8 = 0x1C
+
 	// ReportIDActivityClassifier is the report ID for the activity classifier.
 	ReportIDActivityClassifier uint8 = 0x1E
+
+	// ReportIDSleepDetector is the report ID for the sleep detector.
+	ReportIDSleepDetector uint8 = 0x1F
+
+	// ReportIDTiltDetector is the report ID for the tilt detector.
+	ReportIDTiltDetector uint8 = 0x20
+
+	// ReportIDPocketDetector is the report ID for the pocket detector.
+	ReportIDPocketDetector uint8 = 0x21
+
+	// ReportIDCircleDetector is the report ID for the circle detector.
+	ReportIDCircleDetector uint8 = 0x22
+
+	// ReportIDARVRStabilizedRotationVector is the report ID for the AR/VR stabilized rotation vector.
+	ReportIDARVRStabilizedRotationVector uint8 = 0x28
+
+	// ReportIDARVRStabilizedGameRotationVector is the report ID for the AR/VR stabilized game rotation vector.
+	ReportIDARVRStabilizedGameRotationVector uint8 = 0x29
 
 	// ReportIDCommandResponse is the report ID for command responses
 	ReportIDCommandResponse uint8 = 0xF1
@@ -131,23 +181,35 @@ const (
 	// ReportIDGyroscopeIntegratedRotationVector is the report ID for the gyroscope integrated rotation vector.
 	ReportIDGyroscopeIntegratedRotationVector uint8 = 0x2A
 
+	// ReportSetFeatureCommandLength is the length of the Set Feature command report
+	ReportSetFeatureCommandLength int = 17
+
+	// ReportGetFeatureResponseLength is the length of the Get Feature response report
+	ReportGetFeatureResponseLength int = 17
+
+	// ReportProductIDResponseLength is the length of the Product ID response report
+	ReportProductIDResponseLength int = 16
+
+	// ReportCommandResponseLength is the length of the command response report
+	ReportCommandResponseLength int = 16
+
+	// ReportBaseTimestampLength is the length of the base timestamp report
+	ReportBaseTimestampLength int = 5
+
+	// ReportTimestampRebaseLength is the length of the timestamp rebase report
+	ReportTimestampRebaseLength int = 5
+
+	// AdvertisementPacketLength is the length of the advertisement packet
+	AdvertisementPacketLength int = 272
+
+	// MaxDataLength is the maximum data length for a packet
+	MaxDataLength = AdvertisementPacketLength
+
 	// DefaultReportInterval is the default report interval in microseconds
-	DefaultReportInterval uint32 = 60_000
+	DefaultReportInterval uint32 = 50_000
 
 	// DebugReportInterval is the debug report interval in microseconds
 	DebugReportInterval uint32 = 1_000_000
-
-	// QuaternionReadTimeout is the timeout for reading quaternion data in seconds
-	QuaternionReadTimeout float32 = 0.500
-
-	// PacketReadTimeout is the timeout for reading packets in seconds
-	PacketReadTimeout float32 = 2.000
-
-	// FeatureEnableTimeout is the timeout for enabling features in seconds
-	FeatureEnableTimeout = 5.0 * time.Second
-
-	// DefaultTimeout is the default timeout for operations in seconds
-	DefaultTimeout = 2.0 * time.Second
 
 	// PacketHeaderLength is the length of the Packet header in bytes
 	PacketHeaderLength int = 4
@@ -155,26 +217,29 @@ const (
 	// EnabledActivities is a bitmask for enabled activities. All activities; 1 bit set for each of 8 activities, + Unknown
 	EnabledActivities uint32 = 0x1FF
 
-	// DataBufferSize is the size of the data buffer used for reading and writing
-	DataBufferSize = 512
+	// PacketBufferSize is the size of the packet buffer
+	PacketBufferSize = 512
 
 	// CommandBufferSize is the size of the command buffer
 	CommandBufferSize = 12
 
-	// ResetPacketDelay is the delay after sending a reset command
-	ResetPacketDelay = 100 * time.Millisecond
+	// CommandParametersBufferSize is the size of the command parameters buffer
+	CommandParametersBufferSize = 9
 
-	// InitializeAttempts is the number of attempts to initialize the sensor
-	InitializeAttempts = 3
+	// ResetPinDelay is the delay after toggling the reset pin
+	ResetPinDelay = 10 * time.Millisecond
+
+	// ResetAttempts is the number of attempts to reset the sensor
+	ResetAttempts = 3
+
+	// ResetCommandDelay is the delay after sending a reset command before reading packets
+	ResetCommandDelay = 500 * time.Millisecond
+
+	// EnableFeatureAttempts is the number of attempts to enable a feature
+	EnableFeatureAttempts = 5
 
 	// CheckIDDelay is the delay after checking the sensor ID
 	CheckIDDelay = 500 * time.Millisecond
-
-	// DefaultWaitForPacketTypeTimeout is the default timeout for waiting for a specific packet type in seconds
-	DefaultWaitForPacketTypeTimeout = 5 * time.Second
-
-	// DefaultMaxPackets is the default maximum number of packets to read when waiting for a specific packet type
-	DefaultMaxPackets = 25
 
 	// I2CDefaultAddress is the default I2C address for the BNO08x sensor
 	I2CDefaultAddress uint16 = 0x4A
@@ -194,11 +259,20 @@ const (
 	// I2CProbeDeviceDelay is the delay between attempts to probe the device on the I2C bus
 	I2CProbeDeviceDelay = 50 * time.Millisecond
 
+	// UARTRVCBaudRate is the baud rate for UART-RVC communication
+	UARTRVCBaudRate uint32 = 115_200 // 115200 for UART-RVC
+
 	// UARTBaudRate is the baud rate for UART communication
 	UARTBaudRate uint32 = 3_000_000 // 3Mbps for UART-SHTP
 
-	// UARTRVCBaudRate is the baud rate for UART-RVC communication
-	UARTRVCBaudRate uint32 = 115_200 // 115200 for UART-RVC
+	// UARTDataBits is the number of data bits for UART communication
+	UARTDataBits = 8
+
+	// UARTParity is the parity setting for UART communication
+	UARTParity = machine.ParityNone
+
+	// UARTStopBits is the number of stop bits for UART communication
+	UARTStopBits = 1
 
 	// UARTStartAndEndByte is the start byte and end byte for UART communication
 	UARTStartAndEndByte = 0x7E
@@ -209,8 +283,11 @@ const (
 	// UARTControlEscape is the control escape byte for UART communication
 	UARTControlEscape = 0x7D
 
-	// UARTByteTimeout is the timeout for reading a byte from UART communication in milliseconds
-	UARTByteTimeout = 250 * time.Millisecond
+	// UARTByteTimeout is the timeout for reading a byte from UART communication
+	UARTByteTimeout = 50 * time.Millisecond
+
+	// UARTByteDelay is the delay between bytes when writing to UART
+	UARTByteDelay = 1 * time.Millisecond
 
 	// UARTRVCStartByte is the start byte for UART-RVC communication
 	UARTRVCStartByte = 0xAA
@@ -220,6 +297,27 @@ const (
 
 	// UARTRVCPacketLengthBytes is the number of length bytes in a UART-RVC packet
 	UARTRVCPacketLengthBytes = 19
+
+	// SPIWireMode is the SPI mode for BNO08x communication (CPOL=1, CPHA=1)
+	SPIWireMode = 3
+
+	// SPIFrequency is the SPI bus frequency in Hz
+	SPIFrequency = 1_000_000 // 1MHz
+
+	// SPIIntTimeout is the timeout for waiting for the INT pin to go low
+	SPIIntTimeout = 3 * time.Millisecond
+
+	// QuaternionXIndex is index for the X component in quaternion
+	QuaternionXIndex = 0
+
+	// QuaternionYIndex is index for the Y component in quaternion
+	QuaternionYIndex = 1
+
+	// QuaternionZIndex is index for the Z component in quaternion
+	QuaternionZIndex = 2
+
+	// QuaternionWIndex is index for the W component in quaternion
+	QuaternionWIndex = 3
 
 	// EulerDegreesRollIndex is the index for the roll component in an euler degrees vector
 	EulerDegreesRollIndex = 0
@@ -239,9 +337,6 @@ const (
 	// ThreeDimensionalZIndex is the index for the Z component in a three-dimensional vector
 	ThreeDimensionalZIndex = 2
 
-	// DebugHeader is the header for debug messages
-	DebugHeader = "[BNO08x]"
-
 	// Gravity is the standard gravity in m/s^2
 	Gravity = 9.80665
 
@@ -250,8 +345,35 @@ const (
 )
 
 var (
+	// ExecCommandResetData is the command data for the reset command
+	ExecCommandResetData = []byte{ExecCommandReset}
+
 	// ReportIDProductIDRequestData is the report ID for the report product ID request data.
 	ReportIDProductIDRequestData = []byte{ReportIDProductIDRequest, 0}
+
+	// MaxPackets is the default maximum number of packets to read when waiting for a specific packet type
+	MaxPackets = 10
+
+	// WaitForPacketTypeTimeout is the default timeout for waiting for a specific packet type in seconds
+	WaitForPacketTypeTimeout = 1 * time.Second
+
+	// MaxClearPendingPacketsTimeout is the maximum timeout for clearing pending packets in seconds
+	MaxClearPendingPacketsTimeout = 5 * time.Second
+
+	// CalibrationCommandsTimeout is the timeout for calibration commands in seconds
+	CalibrationCommandsTimeout = 5 * time.Second
+
+	// WaitForPacketTimeout is the timeout for waiting for a packet
+	WaitForPacketTimeout = 1 * time.Second
+
+	// FeatureEnableTimeout is the timeout for enabling features
+	FeatureEnableTimeout = 500 * time.Millisecond
+
+	// PacketReadyCheckDelay is the delay between checks for packet readiness
+	PacketReadyCheckDelay = 50 * time.Microsecond
+
+	// UARTRVCTimeout is the timeout for UART-RVC reads
+	UARTRVCTimeout = 500 * time.Millisecond
 
 	// QuaternionScalar is the scalar for quaternion values
 	QuaternionScalar = math.Pow(2, 14*-1)
@@ -268,15 +390,6 @@ var (
 	// MagneticScalar is the scalar for magnetic field values
 	MagneticScalar = math.Pow(2, 4*-1)
 
-	// ReportLengths is a map of report IDs to their lengths
-	ReportLengths = map[uint8]int{
-		ReportIDProductIDResponse:  16,
-		ReportIDGetFeatureResponse: 17,
-		ReportIDCommandResponse:    16,
-		ReportIDBaseTimestamp:      5,
-		ReportIDTimestampRebase:    5,
-	}
-
 	// RawReports are the raw SHTPCommandsNames require their counterpart to be enabled
 	RawReports = map[uint8]uint8{
 		ReportIDRawAccelerometer: ReportIDAccelerometer,
@@ -285,180 +398,110 @@ var (
 	}
 
 	// SensorReportAccelerometer is the sensor report for the accelerometer
-	SensorReportAccelerometer = &sensorReport{
+	SensorReportAccelerometer = newSensorReport(
 		AccelerometerScalar,
 		3,
 		10,
-	}
+	)
 
 	// SensorReportGravity is the sensor report for the gravity vector
-	SensorReportGravity = &sensorReport{
+	SensorReportGravity = newSensorReport(
 		AccelerometerScalar,
 		3,
 		10,
-	}
+	)
 
 	// SensorReportGyroscope is the sensor report for the gyroscope
-	SensorReportGyroscope = &sensorReport{
+	SensorReportGyroscope = newSensorReport(
 		GyroscopeScalar,
 		3,
 		10,
-	}
+	)
 
 	// SensorReportMagnetometer is the sensor report for the magnetometer
-	SensorReportMagnetometer = &sensorReport{
+	SensorReportMagnetometer = newSensorReport(
 		MagneticScalar,
 		3,
 		10,
-	}
+	)
 
 	// SensorReportLinearAcceleration is the sensor report for the linear acceleration
-	SensorReportLinearAcceleration = &sensorReport{
+	SensorReportLinearAcceleration = newSensorReport(
 		AccelerometerScalar,
 		3,
 		10,
-	}
+	)
 
 	// SensorReportRawAccelerometer is the sensor report for the raw accelerometer
-	SensorReportRawAccelerometer = &sensorReport{
+	SensorReportRawAccelerometer = newSensorReport(
 		1,
 		3,
 		16,
-	}
+	)
 
 	// SensorReportRawGyroscope is the sensor report for the raw gyroscope
-	SensorReportRawGyroscope = &sensorReport{
+	SensorReportRawGyroscope = newSensorReport(
 		1,
 		3,
 		16,
-	}
+	)
 
 	// SensorReportRawMagnetometer is the sensor report for the raw magnetometer
-	SensorReportRawMagnetometer = &sensorReport{
+	SensorReportRawMagnetometer = newSensorReport(
 		1,
 		3,
 		16,
-	}
-
-	// InitialBnoSensorReportThreeDimensional is the initial state of the BNO sensor report for 3D data
-	InitialBnoSensorReportThreeDimensional = [3]float64{0.0, 0.0, 0.0}
+	)
 
 	// SensorReportRotationVector is the sensor report for the rotation vector
-	SensorReportRotationVector = &sensorReport{
+	SensorReportRotationVector = newSensorReport(
 		QuaternionScalar,
 		4,
 		14,
-	}
+	)
 
 	// SensorReportGeomagneticRotationVector is the sensor report for the geomagnetic rotation vector
-	SensorReportGeomagneticRotationVector = &sensorReport{
+	SensorReportGeomagneticRotationVector = newSensorReport(
 		GeomagneticQuaternionScalar,
 		4,
 		14,
-	}
+	)
 
 	// SensorReportGameRotationVector is the sensor report for the game rotation vector
-	SensorReportGameRotationVector = &sensorReport{
+	SensorReportGameRotationVector = newSensorReport(
 		QuaternionScalar,
 		4,
 		12,
-	}
-
-	// InitialBnoSensorReportFourDimensional is the initial state of the BNO sensor report for 4D data
-	InitialBnoSensorReportFourDimensional = [4]float64{0.0, 0.0, 0.0, 0.0}
+	)
 
 	// SensorReportStepCounter is the sensor report for the step counter
-	SensorReportStepCounter = &sensorReport{
+	SensorReportStepCounter = newSensorReport(
 		1,
 		1,
 		12,
-	}
-
-	// InitialBnoStepCount is the initial state of the BNO step count
-	InitialBnoStepCount uint16 = 0
+	)
 
 	// SensorReportShakeDetector is the sensor report for the shake detector
-	SensorReportShakeDetector = &sensorReport{
+	SensorReportShakeDetector = newSensorReport(
 		1,
 		1,
 		6,
-	}
-
-	// InitialBnoShakeDetected is the initial state of the BNO shake detection
-	InitialBnoShakeDetected = false
+	)
 
 	// SensorReportStabilityClassifier is the sensor report for the stability classifier
-	SensorReportStabilityClassifier = &sensorReport{
+	SensorReportStabilityClassifier = newSensorReport(
 		1,
 		1,
-		6,
-	}
-
-	// InitialBnoStabilityClassification is the initial state of the BNO stability classification
-	InitialBnoStabilityClassification = "Unknown"
+		5,
+	)
 
 	// SensorReportActivityClassifier is the sensor report for the activity classifier
-	SensorReportActivityClassifier = &sensorReport{
+	SensorReportActivityClassifier = newSensorReport(
 		1,
 		1,
 		16,
-	}
+	)
 
-	// InitialBnoMostLikelyClassification is the initial state of the BNO most likely classification
-	InitialBnoMostLikelyClassification = "Unknown"
-
-	// InitialBnoClassifications is the initial state of the BNO classifications
-	InitialBnoClassifications = map[string]int{
-		"Tilting":    -1,
-		"OnStairs":   -1,
-		"On-Foot":    -1,
-		"Other":      -1,
-		"On-Bicycle": -1,
-		"Still":      -1,
-		"Walking":    -1,
-		"Unknown":    -1,
-		"Running":    -1,
-		"In-Vehicle": -1,
-	}
-
-	// AvailableSensorReports is a map of available sensor reports
-	AvailableSensorReports = map[uint8]*sensorReport{
-		ReportIDAccelerometer:             SensorReportAccelerometer,
-		ReportIDGravity:                   SensorReportGravity,
-		ReportIDGyroscope:                 SensorReportGyroscope,
-		ReportIDMagnetometer:              SensorReportMagnetometer,
-		ReportIDLinearAcceleration:        SensorReportLinearAcceleration,
-		ReportIDRotationVector:            SensorReportRotationVector,
-		ReportIDGeomagneticRotationVector: SensorReportGeomagneticRotationVector,
-		ReportIDGameRotationVector:        SensorReportGameRotationVector,
-		ReportIDStepCounter:               SensorReportStepCounter,
-		ReportIDShakeDetector:             SensorReportShakeDetector,
-		ReportIDStabilityClassifier:       SensorReportStabilityClassifier,
-		ReportIDActivityClassifier:        SensorReportActivityClassifier,
-		ReportIDRawAccelerometer:          SensorReportRawAccelerometer,
-		ReportIDRawGyroscope:              SensorReportRawGyroscope,
-		ReportIDRawMagnetometer:           SensorReportRawMagnetometer,
-	}
-
-	// Activities is a list of activity strings
-	Activities = []string{
-		"Unknown",
-		"In-Vehicle",
-		"On-Bicycle",
-		"On-Foot",
-		"Still",
-		"Tilting",
-		"Walking",
-		"Running",
-		"OnStairs",
-	}
-
-	// StabilityClassifications is a list of stability classification strings
-	StabilityClassifications = []string{
-		"Unknown",
-		"On Table",
-		"Stationary",
-		"Stable",
-		"In motion",
-	}
+	// headerOnlyPacketMessage is the message printed when a header-only packet is received
+	headerOnlyPacketMessage = []byte("Header-only packet received; skipping read")
 )

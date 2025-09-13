@@ -3,12 +3,35 @@
 package tinygo_bno08x
 
 import (
-	"errors"
-	"fmt"
-	"math"
 	"time"
 
 	"machine"
+
+	tinygotypes "github.com/ralvarezdev/tinygo-types"
+	tinygologger "github.com/ralvarezdev/tinygo-logger"
+)
+
+var (
+	// hardwareResetStart is the initial message printed when performing a hardware reset
+	hardwareResetStart = []byte("Hardware resetting...")
+
+	// hardwareResetComplete is the message printed when a hardware reset is complete
+	hardwareResetComplete = []byte("Hardware reset complete")
+
+	// errorInAfterHardwareResetFn is the message printed when there is an error in the afterHardwareResetFn
+	errorInAfterHardwareResetFn = []byte("Error in afterHardwareResetFn:")
+
+	// softwareResetStart is the initial message printed when performing a software reset
+	softwareResetStart = []byte("Software resetting...")
+
+	// softwareResetComplete is the message printed when a software reset is complete
+	softwareResetComplete = []byte("Software reset complete")
+
+	// foundSHTPAdvertisementPacket is the message printed when an SHTP advertisement packet is found
+	foundSHTPAdvertisementPacket = []byte("Found SHTP advertisement packet")
+
+	// clearingPacketFromChannel is the prefix message printed when clearing a packet from a channel
+	clearingPacketFromChannel = []byte("Clearing packet from channel")
 )
 
 // HardwareReset performs a hardware reset of the BNO08X sensor to an initial unconfigured state.
@@ -16,123 +39,156 @@ import (
 // Parameters:
 //
 // reset: The machine.Pin used to perform the hardware reset.
-// debugger: An optional Debugger for logging debug information during the reset process.
-func HardwareReset(resetPin machine.Pin, debugger Debugger) {
-	if debugger != nil {
-		debugger.Debug("Hardware resetting...")
+// logger: An optional Logger for logging debug information during the reset process.
+func HardwareReset(resetPin machine.Pin, logger tinygologger.Logger) {
+	if logger != nil {
+		logger.InfoMessage(hardwareResetStart)
 	}
 
 	// Configure the reset pin as output
 	resetPin.Configure(machine.PinConfig{Mode: machine.PinOutput})
 
 	resetPin.High()
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(ResetPinDelay)
 
 	resetPin.Low()
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(ResetPinDelay)
 
 	resetPin.High()
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(ResetPinDelay)
+
+	if logger != nil {
+		logger.InfoMessage(hardwareResetComplete)
+	}
 }
 
-// separateBatch takes a Packet and separates it into individual reports, appending them to the provided reports.
+// SoftwareResetForI2CAndSPIMode performs a software reset of the BNO08X sensor when operating in I2C or SPI mode.
 //
 // Parameters:
 //
-// packet: The Packet to separate into reports.
-// reports: A pointer to a slice of slices where the separated reports will be appended.
+// packetWriter: The PacketWriter used to send the reset command.
+// logger: An optional Logger for logging debug information during the reset process.
+// waitForPacketFn: A function that waits for a packet to be available, with a specified timeout.
 //
 // Returns:
 //
-// An error if the Packet cannot be processed due to insufficient bytes or other issues.
-func separateBatch(packet *Packet, reports *[]*report) error {
-	// Check if the packet is nil
-	if packet == nil {
-		return ErrNilPacket
+// An error if the packet writer or waitForPacket function is nil, if sending the reset command fails,
+// or if there are issues while waiting for packets during the reset process.
+func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologger.Logger, waitForPacketFn func(time.Duration) (Packet, tinygotypes.ErrorCode)) tinygotypes.ErrorCode {
+	// Check if the packet writer is nil
+	if packetWriter == nil {
+		return ErrorCodeBNO08XNilPacketWriter
 	}
 
-	// Check if the packet header is nil
-	if packet.Header == nil {
-		return ErrNilPacketHeader
+	// Check if the waitForPacket function is nil
+	if waitForPacketFn == nil {
+		return ErrorCodeBNO08XNilWaitForPacketFunction
 	}
 
-	// Ensure the Packet has a valid header
-	nextByteIndex := 0
-	for nextByteIndex < packet.Header.DataLength {
-		// Check if there are enough bytes left in the Packet to read the report ID
-		reportID := packet.Data[nextByteIndex]
-		requiredBytes := reportLength(reportID)
-		unprocessedByteCount := packet.Header.DataLength - nextByteIndex
 
-		if unprocessedByteCount < requiredBytes {
-			return errors.New(
-				fmt.Sprintf(
-					"unprocessable batch bytes: %d",
-					unprocessedByteCount,
-				),
-			)
+	// Log the start of the reset process
+	if logger != nil {
+		logger.InfoMessage(softwareResetStart)
+	}
+
+	// Send the reset command
+	if _, err := packetWriter.SendPacket(ChannelExe, ExecCommandResetData); err != tinygotypes.ErrorCodeNil {
+		return ErrorCodeBNO08XFailedToSendResetCommandRequestPacket
+	}
+
+	// Wait a bit for the reset to take effect
+	time.Sleep(ResetCommandDelay)
+
+	// Clear out any pending packets
+	startTime := time.Now()
+	for time.Since(startTime) < MaxClearPendingPacketsTimeout {
+		packet, err := waitForPacketFn(WaitForPacketTimeout)
+		if err == ErrorCodeBNO08XWaitingForPacketTimedOut {
+			break
+		}
+		if err != tinygotypes.ErrorCodeNil {
+			logger.WarningMessageWithErrorCode(errorWaitingForPacket, err, true)
+			continue
 		}
 
-		reportBytes := packet.Data[nextByteIndex : nextByteIndex+requiredBytes]
-		report, err := newReport(reportID, &reportBytes)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to create report from bytes: %w",
-				err,
-			)
+		// Log what we're clearing
+		if logger != nil {
+			if packet.ChannelNumber() == ChannelSHTPCommand && len(packet.Data) == AdvertisementPacketLength {
+				logger.InfoMessage(foundSHTPAdvertisementPacket)
+			} else {
+				logger.AddMessageWithUint8(clearingPacketFromChannel, packet.ChannelNumber(), true, true, true)
+				logger.Info()
+			}
 		}
-
-		// Append the new report to the reports
-		*reports = append(
-			*reports,
-			report,
-		)
-		nextByteIndex += requiredBytes
 	}
-	return nil
+
+	if logger != nil {
+		logger.InfoMessage(softwareResetComplete)
+	}
+	return tinygotypes.ErrorCodeNil
 }
 
-// QuaternionToEulerDegrees converts the quaternion representation of orientation to Euler angles (roll, pitch, yaw) in degrees.
+// SoftwareResetForUARTMode performs a software reset of the BNO08X sensor when operating in UART mode.
+//
+// Parameters:
+//
+// packetWriter: The PacketWriter used to send the reset command.
+// logger: An optional Logger for logging debug information during the reset process.
+// waitForPacketFn: A function that waits for a packet to be available, with a specified timeout.
 //
 // Returns:
 //
-// A tuple of three float64 values representing the roll, pitch, and yaw angles in degrees, or an error if the input is nil.
-func QuaternionToEulerDegrees(rotationVector *[4]float64) (*[3]float64, error) {
-	// Check if the rotation vector is nil
-	if rotationVector == nil {
-		return nil, ErrNilRotationVector
+// An error if the packet writer or waitForPacket function is nil, if sending the reset command fails,
+// or if there are issues while waiting for packets during the reset process.
+func SoftwareResetForUARTMode(packetWriter PacketWriter, logger tinygologger.Logger, waitForPacketFn func(time.Duration) (Packet, tinygotypes.ErrorCode)) tinygotypes.ErrorCode {
+	// Check if the packet writer is nil
+	if packetWriter == nil {
+		return ErrorCodeBNO08XNilPacketWriter
 	}
 
-	// Get the quaternion components
-	x := rotationVector[0]
-	y := rotationVector[1]
-	z := rotationVector[2]
-	w := rotationVector[3]
-
-	// Roll (X axis)
-	sinRollCosPitch := 2 * (w*x + y*z)
-	cosRollCosPitch := 1 - 2*(x*x+y*y)
-	roll := math.Atan2(sinRollCosPitch, cosRollCosPitch)
-
-	// Pitch (Y axis)
-	sinPitch := 2 * (w*y - z*x)
-	var pitch float64
-	if sinPitch >= 1 {
-		pitch = math.Pi / 2
-	} else if sinPitch <= -1 {
-		pitch = -math.Pi / 2
-	} else {
-		pitch = math.Asin(sinPitch)
+	// Check if the waitForPacket function is nil
+	if waitForPacketFn == nil {
+		return ErrorCodeBNO08XNilWaitForPacketFunction
 	}
 
-	// Yaw (Z axis)
-	sinYawCosPitch := 2 * (w*z + x*y)
-	cosYawCosPitch := 1 - 2*(y*y+z*z)
-	yaw := math.Atan2(sinYawCosPitch, cosYawCosPitch)
+	// Log the start of the reset process
+	if logger != nil {
+		logger.InfoMessage(softwareResetStart)
+	}
 
-	return &[3]float64{
-		roll * 180 / math.Pi,
-		pitch * 180 / math.Pi,
-		yaw * 180 / math.Pi,
-	}, nil
+	// Clear out any pending packets
+	startTime := time.Now()
+	for time.Since(startTime) < MaxClearPendingPacketsTimeout {
+		packet, err := waitForPacketFn(WaitForPacketTimeout)
+		if err == ErrorCodeBNO08XWaitingForPacketTimedOut {
+			break
+		}
+		if err != tinygotypes.ErrorCodeNil {
+			logger.WarningMessageWithErrorCode(errorWaitingForPacket, err, true)
+			continue
+		}
+
+		// Log what we're clearing
+		if logger != nil {
+			if packet.ChannelNumber() == ChannelSHTPCommand && len(packet.Data) == AdvertisementPacketLength {
+				logger.InfoMessage(foundSHTPAdvertisementPacket)
+			} else {
+				logger.AddMessageWithUint8(clearingPacketFromChannel, packet.ChannelNumber(), true, true, true)
+				logger.Info()
+			}
+		}
+	}
+
+	// Send the reset command
+	if _, err := packetWriter.SendPacket(ChannelExe, ExecCommandResetData); err != tinygotypes.ErrorCodeNil {
+		return ErrorCodeBNO08XFailedToSendResetCommandRequestPacket
+	}
+
+	// Wait a bit for the reset to take effect
+	time.Sleep(ResetCommandDelay)
+
+	if logger != nil {
+		logger.InfoMessage(softwareResetComplete)
+	}
+	return tinygotypes.ErrorCodeNil
 }

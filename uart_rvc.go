@@ -4,10 +4,12 @@ package tinygo_bno08x
 
 import (
 	"encoding/binary"
-	"fmt"
 	"time"
 
 	"machine"
+
+	tinygotypes "github.com/ralvarezdev/tinygo-types"
+	tinygologger "github.com/ralvarezdev/tinygo-logger"
 )
 
 type (
@@ -19,38 +21,45 @@ type (
 		ps0Pin        machine.Pin
 		ps1Pin        machine.Pin
 		resetPin      machine.Pin
-		dataBuffer    DataBuffer
-		debugger      Debugger
+		logger      tinygologger.Logger
 		timeout       time.Duration
-		accelerometer *[3]float64
-		eulerDegrees  *[3]float64
+		accelerometer [3]float64
+		eulerDegrees  [3]float64
 		initComplete  bool
+		buffer 	  []byte
 	}
 
 	// UARTRVCOptions struct for configuring the BNO08X over UART-RVC.
 	UARTRVCOptions struct {
 		Options *Options
-		Timeout time.Duration
 	}
+)
+
+var (
+	// invalidChecksumMessage is the message printed when an invalid checksum is detected
+	invalidChecksumMessage = []byte("Invalid checksum detected")
+
+	// receivedFrameMessage is the message printed when a frame is received
+	receivedFrameMessage = []byte("Received frame")
+
+	// failedToParseFrameMessage is the message printed when parsing a frame fails
+	failedToParseFrameMessage = []byte("Failed to parse frame")
 )
 
 // NewUARTRVCOptions creates a new UARTRVCOptions instance with default values.
 //
 // Parameters:
 //
-// debugger: The debugger to use for logging and debugging information (optional).
-// timeout: The timeout duration for reading data (optional).
+// logger: The logger to use for logging and debugging information (optional).
 //
 // Returns:
 //
 // A pointer to a new UARTRVCOptions instance.
 func NewUARTRVCOptions(
-	debugger Debugger,
-	timeout time.Duration,
+	logger tinygologger.Logger,
 ) *UARTRVCOptions {
 	return &UARTRVCOptions{
-		Options: NewOptions(debugger),
-		Timeout: timeout,
+		Options: NewOptions(logger),
 	}
 }
 
@@ -64,7 +73,6 @@ func NewUARTRVCOptions(
 // ps0Pin: The PS0 pin to set the sensor to UART mode.
 // ps1Pin: The PS1 pin to set the sensor to UART mode.
 // resetPin: The pin used to reset the BNO08X sensor.
-// dataBuffer: The data buffer to use for storing Packet data.
 // options: The Options for configuring the BNO08X (optional).
 //
 // Returns:
@@ -77,12 +85,11 @@ func NewUARTRVC(
 	ps0Pin machine.Pin,
 	ps1Pin machine.Pin,
 	resetPin machine.Pin,
-	dataBuffer DataBuffer,
 	options *UARTRVCOptions,
-) (*UARTRVC, error) {
+) (*UARTRVC, tinygotypes.ErrorCode) {
 	// Check if the UART bus is nil
 	if uartBus == nil {
-		return nil, ErrNilUARTBus
+		return nil, ErrorCodeBNO08XNilUARTBus
 	}
 
 	// Set PS0 pin to output and high
@@ -101,19 +108,16 @@ func NewUARTRVC(
 			RX:       rxPin,
 		},
 	); err != nil {
-		return nil, fmt.Errorf("failed to configure uart: %w", err)
+		return nil, ErrorCodeBNO08XFailedToConfigureUART
 	}
 
 	// If options are nil, initialize with default values
 	if options == nil {
-		options = NewUARTRVCOptions(nil, DefaultTimeout)
+		options = NewUARTRVCOptions(nil)
 	}
 
-	// Get the timeout from options
-	timeout := options.Timeout
-
-	// Get the debugger from options
-	debugger := options.Options.Debugger
+	// Get the logger from options
+	logger := options.Options.Logger
 
 	// Create the UART-RVC instance
 	uartRVC := &UARTRVC{
@@ -123,140 +127,58 @@ func NewUARTRVC(
 		ps0Pin:        ps0Pin,
 		ps1Pin:        ps1Pin,
 		resetPin:      resetPin,
-		dataBuffer:    dataBuffer,
-		debugger:      debugger,
-		accelerometer: &InitialBnoSensorReportThreeDimensional,
-		eulerDegrees:  &InitialBnoSensorReportThreeDimensional,
-		timeout:       timeout,
+		logger:      logger,
+		buffer:        make([]byte, UARTRVCPacketLengthBytes),
+		timeout:       UARTRVCTimeout,
 		initComplete:  false,
 	}
 
-	// Perform initialization
-	if err := uartRVC.Initialize(); err != nil {
-		return nil, fmt.Errorf(
-			"failed to initialize bno08x with uart rvc: %w",
-			err,
-		)
-	}
-	return uartRVC, nil
-}
-
-// Initialize performs the initial setup of the BNO08X sensor, including hardware and software resets.
-//
-// Returns:
-//
-// An error if the initialization fails, otherwise nil.
-func (u *UARTRVC) Initialize() error {
-	// Check if already initialized
-	if u.initComplete {
-		return nil
-	}
-
-	// Log initialization start
-	if u.debugger != nil {
-		u.debugger.Debug("Initializing BNO08X sensor with UART-RVC...")
-	}
-
 	// Perform reset
-	u.Reset()
-	u.initComplete = true
-
-	// Log
-	if u.debugger != nil {
-		u.debugger.Debug("BNO08X sensor with UART-RVC initialized successfully.")
+	if err := uartRVC.Reset(); err != tinygotypes.ErrorCodeNil {
+		return nil, ErrorCodeBNO08XFailedToResetUARTRVC
 	}
-	return nil
+	return uartRVC, tinygotypes.ErrorCodeNil
 }
 
-// HardwareReset performs a hardware reset of the BNO08X sensor using the specified reset pin.
+// Reset performs a hardware reset of the BNO08X sensor using the specified reset pin.
 //
 // Returns:
 //
 // An error if the reset process fails, otherwise nil.
-func (u *UARTRVC) HardwareReset() {
-	HardwareReset(u.resetPin, u.debugger)
-}
-
-// SoftwareReset performs a software reset of the BNO08X sensor.
-//
-// Returns:
-//
-// An error if the software reset fails, otherwise nil.
-func (u *UARTRVC) SoftwareReset() error {
-	return nil
-}
-
-// Reset performs a reset of the BNO08X sensor.
-//
-// Returns:
-//
-// An error if the reset fails, otherwise nil.
-func (u *UARTRVC) Reset() error {
-	// Perform hardware reset
-	u.HardwareReset()
-
-	// Perform software reset
-	return u.SoftwareReset()
+func (u *UARTRVC) Reset() tinygotypes.ErrorCode  {
+	HardwareReset(u.resetPin, u.logger)
+	return tinygotypes.ErrorCodeNil
 }
 
 // ParseFrame parses a heading frame from the BNO08x RVC.
 //
-// Parameters:
-//
-// frame: A pointer to a byte slice containing the frame data.
-//
 // Returns:
 //
-// An error if the frame is nil or invalid.
-func (u *UARTRVC) ParseFrame(frame *[]byte) error {
-	// Check if the frame is nil
-	if frame == nil {
-		return ErrNilFrame
-	}
-
-	// Check if the frame length is at least 19 bytes
-	if len(*frame) < UARTRVCPacketLengthBytes {
-		return ErrFrameTooShort
-	}
-
+// An error if parsing fails.
+func (u *UARTRVC) ParseFrame() tinygotypes.ErrorCode {
 	// Retrieve and parse fields from the frame
-	// index := frame[2]
-	yaw := int16(binary.LittleEndian.Uint16((*frame)[3:5]))
-	pitch := int16(binary.LittleEndian.Uint16((*frame)[5:7]))
-	roll := int16(binary.LittleEndian.Uint16((*frame)[7:9]))
-	xAccel := int16(binary.LittleEndian.Uint16((*frame)[9:11]))
-	yAccel := int16(binary.LittleEndian.Uint16((*frame)[11:13]))
-	zAccel := int16(binary.LittleEndian.Uint16((*frame)[13:15]))
-	// res1 := (*frame)[15]
-	// res2 := (*frame)[16]
-	// res3 := (*frame)[17]
-	checksum := (*frame)[18]
+	// index := u.buffer[2]
+	yaw := int16(binary.LittleEndian.Uint16(u.buffer[3:5]))
+	pitch := int16(binary.LittleEndian.Uint16(u.buffer[5:7]))
+	roll := int16(binary.LittleEndian.Uint16(u.buffer[7:9]))
+	xAccel := int16(binary.LittleEndian.Uint16(u.buffer[9:11]))
+	yAccel := int16(binary.LittleEndian.Uint16(u.buffer[11:13]))
+	zAccel := int16(binary.LittleEndian.Uint16(u.buffer[13:15]))
+	// res1 := u.buffer[15]
+	// res2 := u.buffer[16]
+	// res3 := u.buffer[17]
+	checksum := u.buffer[18]
 
 	// Validate checksum
 	checksumCalc := byte(0)
 	for i := UARTRVCHeaderLength; i < UARTRVCPacketLengthBytes-1; i++ {
-		checksumCalc += (*frame)[i]
-		if u.debugger != nil {
-			u.debugger.Debug(
-				fmt.Sprintf(
-					"Checksum calc at byte %d: 0x%X",
-					i,
-					checksumCalc,
-				),
-			)
-		}
+		checksumCalc += u.buffer[i]
 	}
 	if checksumCalc != checksum {
-		if u.debugger != nil {
-			u.debugger.Debug(
-				fmt.Sprintf(
-					"invalid checksum: calculated 0x%X, received 0x%X",
-					checksumCalc,
-					checksum,
-				),
-			)
+		if u.logger != nil {
+			u.logger.InfoMessage(invalidChecksumMessage)
 		}
-		return ErrInvalidChecksum
+		return ErrorCodeBNO08XUARTRVCInvalidChecksum
 	}
 
 	// Update the current euler degrees
@@ -268,7 +190,7 @@ func (u *UARTRVC) ParseFrame(frame *[]byte) error {
 	u.accelerometer[ThreeDimensionalXIndex] = float64(xAccel) * MilligToMeterPerSecondSquared
 	u.accelerometer[ThreeDimensionalYIndex] = float64(yAccel) * MilligToMeterPerSecondSquared
 	u.accelerometer[ThreeDimensionalZIndex] = float64(zAccel) * MilligToMeterPerSecondSquared
-	return nil
+	return tinygotypes.ErrorCodeNil
 }
 
 // readByte blocks until a byte is read (simple poll).
@@ -276,15 +198,17 @@ func (u *UARTRVC) ParseFrame(frame *[]byte) error {
 // Returns:
 //
 // A byte read from UART and an error if any.
-func (u *UARTRVC) readByte() (byte, error) {
+func (u *UARTRVC) readByte() (byte, tinygotypes.ErrorCode) {
 	startTime := time.Now()
 	for time.Since(startTime) < UARTByteTimeout {
 		if u.uartBus.Buffered() > 0 {
-			return u.uartBus.ReadByte()
+			if b, err := u.uartBus.ReadByte(); err == nil {
+				return b, tinygotypes.ErrorCodeNil
+			}
+			return 0, ErrorCodeBNO08XUARTRVCFailedToReadByte
 		}
-		time.Sleep(1 * time.Millisecond)
 	}
-	return 0, ErrUARTTimeout
+	return 0, ErrorCodeBNO08XUARTRVCByteTimeout
 }
 
 // Read reads a heading frame from the BNO08x from UART-RVC.
@@ -292,29 +216,32 @@ func (u *UARTRVC) readByte() (byte, error) {
 // Returns:
 //
 // An error if reading fails or times out.
-func (u *UARTRVC) Read() error {
+func (u *UARTRVC) Read() tinygotypes.ErrorCode {
+	// Clear frame buffer
+	for i := range u.buffer {
+		u.buffer[i] = 0
+	}
+
 	// Get the start time for timeout calculation
 	start := time.Now()
-	frame := make([]byte, UARTRVCPacketLengthBytes)
-
 	for time.Since(start) < u.timeout {
 		// Loop until timeout to find the start bytes
 		processedBytes := 0
 		for processedBytes < UARTRVCHeaderLength {
 			b, err := u.readByte()
-			if err != nil {
+			if err != tinygotypes.ErrorCodeNil {
 				return err
 			}
-			frame[processedBytes] = b
+			u.buffer[processedBytes] = b
 			processedBytes++
 		}
 
 		// Check if we have the start bytes
-		if frame[0] != UARTRVCStartByte || frame[1] != UARTRVCStartByte {
+		if u.buffer[0] != UARTRVCStartByte || u.buffer[1] != UARTRVCStartByte {
 			// Check if we have the first start byte
-			if frame[1] == UARTRVCStartByte {
+			if u.buffer[1] == UARTRVCStartByte {
 				// Shift the second byte to the first position
-				frame[0] = frame[1]
+				u.buffer[0] = u.buffer[1]
 				processedBytes = 1
 			} else {
 				// Reset processed bytes
@@ -326,43 +253,45 @@ func (u *UARTRVC) Read() error {
 		// We have the start bytes, read the rest of the frame
 		for processedBytes < UARTRVCPacketLengthBytes {
 			b, err := u.readByte()
-			if err != nil {
+			if err != tinygotypes.ErrorCodeNil {
 				return err
 			}
-			frame[processedBytes] = b
+			u.buffer[processedBytes] = b
 			processedBytes++
 		}
 
 		// Print the raw frame for debugging
-		if u.debugger != nil {
-			u.debugger.Debug(fmt.Sprintf("Received frame: % X", frame))
+		if u.logger != nil {
+			u.logger.InfoMessage(receivedFrameMessage)
 		}
 
 		// Parse the frame
-		if err := u.ParseFrame(&frame); err != nil {
-			// If parsing fails, log the error and try again
-			if u.debugger != nil {
-				u.debugger.Debug(fmt.Sprintf("failed to parse frame: %v", err))
+		if err := u.ParseFrame(); err != tinygotypes.ErrorCodeNil {
+			if u.logger != nil {
+				u.logger.WarningMessage(failedToParseFrameMessage)
 			}
-			return err
+			return ErrorCodeBNO08XFailedToParseFrame
 		}
-		return nil
+		return tinygotypes.ErrorCodeNil
 	}
-	return ErrRVCTimeout
+	return ErrorCodeBNO08XUARTRVCUARTTimeout
+}
+
+// Update reads a new frame from the BNO08x sensor and updates the internal state.
+//
+// Returns:
+//
+// An error if reading or parsing the frame fails.
+func (u *UARTRVC) Update() tinygotypes.ErrorCode {
+	return u.Read()
 }
 
 // GetAcceleration returns the acceleration measurements on the X, Y, and Z axes in meters per second squared.
 //
 // Returns:
 //
-//	A pointer to a [3]float64 array containing the acceleration values.
-func (u *UARTRVC) GetAcceleration() *[3]float64 {
-	// Read a new frame to update the euler degrees
-	if err := u.Read(); err != nil {
-		if u.debugger != nil {
-			u.debugger.Debug(fmt.Sprintf("failed to read frame: %v", err))
-		}
-	}
+//	A [3]float64 array containing the acceleration values.
+func (u *UARTRVC) GetAcceleration() [3]float64 {
 	return u.accelerometer
 }
 
@@ -371,12 +300,6 @@ func (u *UARTRVC) GetAcceleration() *[3]float64 {
 // Returns:
 //
 // A tuple of three float64 values representing the roll, pitch, and yaw angles in degrees.
-func (u *UARTRVC) GetEulerDegrees() *[3]float64 {
-	// Read a new frame to update the euler degrees
-	if err := u.Read(); err != nil {
-		if u.debugger != nil {
-			u.debugger.Debug(fmt.Sprintf("failed to read frame: %v", err))
-		}
-	}
+func (u *UARTRVC) GetEulerDegrees() [3]float64 {
 	return u.eulerDegrees
 }
