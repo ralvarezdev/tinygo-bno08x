@@ -36,33 +36,7 @@ type (
 		logger   tinygologger.Logger
 		ultraDebug bool
 	}
-
-	// UARTOptions struct for configuring the BNO08X over UART.
-	UARTOptions struct {
-		Options    *Options
-		UltraDebug bool
-	}
 )
-
-// NewUARTOptions creates a new UARTOptions instance with default values.
-//
-// Parameters:
-//
-// logger: The logger to use for logging and debugging information (optional).
-// ultraDebug: Flag to enable ultra debug mode (optional).
-//
-// Returns:
-//
-// A pointer to a new UARTOptions instance.
-func NewUARTOptions(
-	logger tinygologger.Logger,
-	ultraDebug bool,
-) *UARTOptions {
-	return &UARTOptions{
-		Options:    NewOptions(logger),
-		UltraDebug: ultraDebug,
-	}
-}
 
 // NewUART creates a new UART instance for the BNO08X sensor
 //
@@ -75,10 +49,9 @@ func NewUARTOptions(
 // ps1Pin: The PS1 pin to set the sensor to UART mode.
 // resetPin: The pin used to reset the BNO08X sensor.
 // packetBuffer: The packet buffer to use for storing Packet data.
-//
-//	afterResetFn: An optional function to be called after a reset.
-//
-// options: The UARTOptions for configuring the BNO08X (optional).
+// afterResetFn: An optional function to be called after a reset.
+// logger: The logger to use for logging and debugging information (optional).
+// ultraDebug: Flag to enable ultra debug mode (optional).
 //
 // Returns:
 //
@@ -92,7 +65,8 @@ func NewUART(
 	resetPin machine.Pin,
 	packetBuffer PacketBuffer,
 	afterResetFn func(b *BNO08X) tinygotypes.ErrorCode,
-	options *UARTOptions,
+	logger tinygologger.Logger,
+	ultraDebug bool,
 ) (*UART, tinygotypes.ErrorCode) {
 	// Check if the UART bus is nil
 	if uartBus == nil {
@@ -123,20 +97,12 @@ func NewUART(
 		return nil, ErrorCodeBNO08XFailedToSetUARTFormat
 	}
 
-	// If options are nil, initialize with default values
-	if options == nil {
-		options = NewUARTOptions(nil, false)
-	}
-
-	// Get the logger from options
-	logger := options.Options.Logger
-
 	// Create packet reader and writer
 	packetReader, err := newUARTPacketReader(
 		uartBus,
 		packetBuffer,
 		logger,
-		options.UltraDebug,
+		ultraDebug,
 	)
 	if err != tinygotypes.ErrorCodeNil {
 		return nil, ErrorCodeBNO08XFailedToCreatePacketReader
@@ -146,7 +112,7 @@ func NewUART(
 		uartBus,
 		packetBuffer,
 		logger,
-		options.UltraDebug,
+		ultraDebug,
 	)
 	if err != tinygotypes.ErrorCodeNil {
 		return nil, ErrorCodeBNO08XFailedToCreatePacketWriter
@@ -160,7 +126,7 @@ func NewUART(
 		packetBuffer,
 		UARTMode,
 		afterResetFn,
-		options.Options,
+		logger,
 	)
 	if err != tinygotypes.ErrorCodeNil {
 		return nil, err

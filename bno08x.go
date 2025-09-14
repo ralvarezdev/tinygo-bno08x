@@ -54,11 +54,6 @@ type (
 		mode                            Mode
 		afterResetFn                    func(b *BNO08X) tinygotypes.ErrorCode
 	}
-
-	// Options struct holds configuration options for the BNO08X instance
-	Options struct {
-		Logger tinygologger.Logger // Logger instance for debug messages
-	}
 )
 
 var (
@@ -102,32 +97,17 @@ var (
 	processingReport = []byte("Processing report:")
 )
 
-// NewOptions creates a new Options instance with the specified logger.
-//
-// Parameters:
-//
-//	logger: The Logger instance for debug messages.
-//
-// Returns:
-//
-// A pointer to a new Options instance.
-func NewOptions(logger tinygologger.Logger) *Options {
-	return &Options{
-		Logger: logger,
-	}
-}
-
 // NewBNO08X creates a new BNO08X instance with the specified reset pin and debug mode
 //
 // Parameters:
 //
-//	 resetPin: The pin used to reset the BNO08X sensor.
-//		packetReader: The PacketReader to read packets from the BNO08X sensor.
-//		packetWriter: The PacketWriter to write packets to the BNO08X sensor.
-//		packetBuffer: The PacketBuffer to store Packet data.
-//		mode: The operation mode of the BNO08X sensor (I2C, UART, SPI, etc.).
-//		afterResetFn: An optional function to be called after a software reset.
-//		options: Optional configuration options for the BNO08X instance.
+//	resetPin: The pin used to reset the BNO08X sensor.
+//	packetReader: The PacketReader to read packets from the BNO08X sensor.
+//	packetWriter: The PacketWriter to write packets to the BNO08X sensor.
+//	packetBuffer: The PacketBuffer to store Packet data.
+//	mode: The operation mode of the BNO08X sensor (I2C, UART, SPI, etc.).
+//	afterResetFn: An optional function to be called after a software reset.
+//	logger: The Logger instance for debug messages.
 //
 // Returns:
 //
@@ -139,7 +119,7 @@ func NewBNO08X(
 	packetBuffer PacketBuffer,
 	mode Mode,
 	afterResetFn func(b *BNO08X) tinygotypes.ErrorCode,
-	options *Options,
+	logger tinygologger.Logger,
 ) (*BNO08X, tinygotypes.ErrorCode) {
 	// Check if packetReader, packetWriter and packetBuffer are provided
 	if packetReader == nil {
@@ -157,16 +137,11 @@ func NewBNO08X(
 		return nil, ErrorCodeBNO08XInvalidMode
 	}
 
-	// If options are nil, initialize with default values
-	if options == nil {
-		options = NewOptions(nil)
-	}
-
 	// Create the BNO08X instance
 	bno08x := &BNO08X{
 		packetReader:             packetReader,
 		packetWriter:             packetWriter,
-		logger:                   options.Logger,
+		logger:                   logger,
 		resetPin:                 resetPin,
 		packetBuffer:             packetBuffer,
 		calibrationComplete:      false,

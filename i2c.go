@@ -39,12 +39,6 @@ type (
 		logger   tinygologger.Logger
 		address    uint16 // I2C address of the device
 	}
-
-	// I2COptions struct for configuring the BNO08X over I2C.
-	I2COptions struct {
-		Options  *Options
-		Address0 *machine.Pin
-	}
 )
 
 var (
@@ -73,26 +67,6 @@ func probeDevice(bus *machine.I2C, address uint16) tinygotypes.ErrorCode {
 	return tinygotypes.ErrorCodeNil
 }
 
-// NewI2COptions creates a new I2COptions instance with default values.
-//
-// Parameters:
-//
-// logger: The logger to use for logging and debugging information (optional).
-// address0Pin: The pin used to set the I2C address (optional).
-//
-// Returns:
-//
-// A pointer to a new I2COptions instance.
-func NewI2COptions(
-	logger tinygologger.Logger,
-	address0Pin *machine.Pin,
-) *I2COptions {
-	return &I2COptions{
-		Options:  NewOptions(logger),
-		Address0: address0Pin,
-	}
-}
-
 // NewI2C creates a new I2C instance for the BNO08X sensor.
 //
 // Parameters:
@@ -106,7 +80,8 @@ func NewI2COptions(
 // resetPin: The pin used to reset the BNO08X sensor.
 // packetBuffer: The PacketBuffer to use for storing Packet data.
 // afterResetFn: An optional function to be called after a reset.
-// options: Optional configuration options for the BNO08X sensor.
+// logger: The logger to use for logging and debugging information (optional).
+// address0Pin: The pin used to set the I2C address (optional).
 //
 // Returns:
 //
@@ -121,7 +96,8 @@ func NewI2C(
 	resetPin machine.Pin,
 	packetBuffer PacketBuffer,
 	afterResetFn func(b *BNO08X) tinygotypes.ErrorCode,
-	options *I2COptions,
+	logger tinygologger.Logger,
+	address0Pin *machine.Pin,
 ) (*I2C, tinygotypes.ErrorCode) {
 	// Check if the I2C bus is nil
 	if i2cBus == nil {
@@ -147,23 +123,18 @@ func NewI2C(
 		return nil, ErrorCodeBNO08XFailedToConfigureI2C
 	}
 
-	// If options are nil, initialize with default values
-	if options == nil {
-		options = NewI2COptions(nil, nil)
-	}
-
 	// Check if the address is the default or the alternative
 	if address != I2CDefaultAddress && address != I2CAlternativeAddress {
 		return nil, ErrorCodeBNO08XInvalidI2CAddress
 	}
 
 	// Set the Address0 pin based on the desired address
-	if options.Address0 != nil {
-		options.Address0.Configure(machine.PinConfig{Mode: machine.PinOutput})
+	if address0Pin != nil {
+		address0Pin.Configure(machine.PinConfig{Mode: machine.PinOutput})
 		if address == I2CAlternativeAddress {
-			options.Address0.High()
+			address0Pin.High()
 		} else {
-			options.Address0.Low()
+			address0Pin.Low()
 		}
 	}
 
@@ -180,9 +151,6 @@ func NewI2C(
 	if !isGood {
 		return nil, ErrorCodeBNO08XI2CFailedToProbeDeviceRepeatly
 	}
-
-	// Get the logger from options
-	logger := options.Options.Logger
 
 	// Initialize the packet reader
 	packetReader, err := newI2CPacketReader(
@@ -214,7 +182,7 @@ func NewI2C(
 		packetBuffer,
 		I2CMode,
 		afterResetFn,
-		options.Options,
+		logger,
 	)
 	if err != tinygotypes.ErrorCodeNil {
 		return nil, err

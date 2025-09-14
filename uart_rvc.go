@@ -28,11 +28,6 @@ type (
 		initComplete  bool
 		buffer 	  []byte
 	}
-
-	// UARTRVCOptions struct for configuring the BNO08X over UART-RVC.
-	UARTRVCOptions struct {
-		Options *Options
-	}
 )
 
 var (
@@ -46,23 +41,6 @@ var (
 	failedToParseFrameMessage = []byte("Failed to parse frame")
 )
 
-// NewUARTRVCOptions creates a new UARTRVCOptions instance with default values.
-//
-// Parameters:
-//
-// logger: The logger to use for logging and debugging information (optional).
-//
-// Returns:
-//
-// A pointer to a new UARTRVCOptions instance.
-func NewUARTRVCOptions(
-	logger tinygologger.Logger,
-) *UARTRVCOptions {
-	return &UARTRVCOptions{
-		Options: NewOptions(logger),
-	}
-}
-
 // NewUARTRVC creates a new UARTRVC instance.
 //
 // Parameters:
@@ -73,7 +51,7 @@ func NewUARTRVCOptions(
 // ps0Pin: The PS0 pin to set the sensor to UART mode.
 // ps1Pin: The PS1 pin to set the sensor to UART mode.
 // resetPin: The pin used to reset the BNO08X sensor.
-// options: The Options for configuring the BNO08X (optional).
+// logger: The logger to use for logging and debugging information (optional).
 //
 // Returns:
 //
@@ -85,7 +63,7 @@ func NewUARTRVC(
 	ps0Pin machine.Pin,
 	ps1Pin machine.Pin,
 	resetPin machine.Pin,
-	options *UARTRVCOptions,
+	logger tinygologger.Logger,
 ) (*UARTRVC, tinygotypes.ErrorCode) {
 	// Check if the UART bus is nil
 	if uartBus == nil {
@@ -110,14 +88,6 @@ func NewUARTRVC(
 	); err != nil {
 		return nil, ErrorCodeBNO08XFailedToConfigureUART
 	}
-
-	// If options are nil, initialize with default values
-	if options == nil {
-		options = NewUARTRVCOptions(nil)
-	}
-
-	// Get the logger from options
-	logger := options.Options.Logger
 
 	// Create the UART-RVC instance
 	uartRVC := &UARTRVC{

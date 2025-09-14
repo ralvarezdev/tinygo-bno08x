@@ -40,34 +40,12 @@ type (
 		packetBuffer PacketBuffer
 		logger   tinygologger.Logger
 	}
-
-	// SPIOptions struct for configuring the BNO08X over SPI.
-	SPIOptions struct {
-		Options    *Options
-	}
 )
 
 var (
 	// waitingForINTMessage is the message printed when waiting for INT pin
 	waitingForINTMessage = []byte("Waiting for INT...")
 )
-
-// NewSPIOptions creates a new SPIOptions instance with default values.
-//
-// Parameters:
-//
-// logger: The logger to use for logging and debugging information (optional).
-//
-// Returns:
-//
-// A pointer to a new SPIOptions instance.
-func NewSPIOptions(
-	logger tinygologger.Logger,
-) *SPIOptions {
-	return &SPIOptions{
-		Options:    NewOptions(logger),
-	}
-}
 
 // NewSPI creates a new SPI instance for the BNO08X sensor
 //
@@ -84,7 +62,7 @@ func NewSPIOptions(
 // resetPin: The pin used to reset the BNO08X sensor.
 // packetBuffer: The packet buffer to use for storing Packet data.
 // afterResetFn: An optional function to be called after a reset.
-// options: The SPIOptions for configuring the BNO08X (optional).
+// logger: The logger to use for logging and debugging information (optional).
 //
 // Returns:
 //
@@ -101,7 +79,7 @@ func NewSPI(
 	resetPin machine.Pin,
 	packetBuffer PacketBuffer,
 	afterResetFn func(b *BNO08X) tinygotypes.ErrorCode,
-	options *SPIOptions,
+	logger tinygologger.Logger,
 ) (*SPI, tinygotypes.ErrorCode) {
 	// Check if the SPI bus is nil
 	if spiBus == nil {
@@ -137,14 +115,6 @@ func NewSPI(
 		return nil, ErrorCodeBNO08XFailedToConfigureSPI
 	}
 
-	// If options are nil, initialize with default values
-	if options == nil {
-		options = NewSPIOptions(nil)
-	}
-
-	// Get the logger from options
-	logger := options.Options.Logger
-
 	// Create packet reader and writer
 	packetReader, err := newSPIPacketReader(
 		spiBus,
@@ -174,7 +144,7 @@ func NewSPI(
 		packetBuffer,
 		SPIMode,
 		afterResetFn,
-		options.Options,
+		logger,
 	)
 	if err != tinygotypes.ErrorCodeNil {
 		return nil, err
