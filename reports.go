@@ -553,7 +553,7 @@ func newSensorReportData(report report) (sensorReportData, tinygotypes.ErrorCode
 
 		// Read the raw data from the report bytes
 		var rawData float64
-		rawDataUint16 := tinygobuffers.BytesToUint16LE(report.Data[totalOffset : totalOffset+2])
+		rawDataUint16, _ := tinygobuffers.BytesToUint16LE(report.Data[totalOffset : totalOffset+2])
 		if formatUnsigned {
 			rawData = float64(rawDataUint16)
 		} else {
