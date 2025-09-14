@@ -3,13 +3,13 @@
 package tinygo_bno08x
 
 import (
-	"encoding/binary"
 	"time"
 
 	"machine"
 
 	tinygotypes "github.com/ralvarezdev/tinygo-types"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
+	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 )
 
 type (
@@ -127,13 +127,13 @@ func (u *UARTRVC) Reset() tinygotypes.ErrorCode  {
 // An error if parsing fails.
 func (u *UARTRVC) ParseFrame() tinygotypes.ErrorCode {
 	// Retrieve and parse fields from the frame
-	// index := u.buffer[2]
-	yaw := int16(binary.LittleEndian.Uint16(u.buffer[3:5]))
-	pitch := int16(binary.LittleEndian.Uint16(u.buffer[5:7]))
-	roll := int16(binary.LittleEndian.Uint16(u.buffer[7:9]))
-	xAccel := int16(binary.LittleEndian.Uint16(u.buffer[9:11]))
-	yAccel := int16(binary.LittleEndian.Uint16(u.buffer[11:13]))
-	zAccel := int16(binary.LittleEndian.Uint16(u.buffer[13:15]))
+	// index := u.buffer[2
+	yaw, _ := tinygobuffers.BytesToUint16LE(u.buffer[3:5])
+	pitch, _ := tinygobuffers.BytesToUint16LE(u.buffer[5:7])
+	roll, _ := tinygobuffers.BytesToUint16LE(u.buffer[7:9])
+	xAccel, _ := tinygobuffers.BytesToUint16LE(u.buffer[9:11])
+	yAccel, _ := tinygobuffers.BytesToUint16LE(u.buffer[11:13])
+	zAccel, _ := tinygobuffers.BytesToUint16LE(u.buffer[13:15])
 	// res1 := u.buffer[15]
 	// res2 := u.buffer[16]
 	// res3 := u.buffer[17]

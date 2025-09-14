@@ -3,10 +3,9 @@
 package tinygo_bno08x
 
 import (
-	"encoding/binary"
-
 	tinygotypes "github.com/ralvarezdev/tinygo-types"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
+	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 )
 
 type (
@@ -217,8 +216,8 @@ func newSetFeatureCommandReport(
 	// Create the set feature report data
 	buffer[0] = ReportIDSetFeatureCommand
 	buffer[1] = featureID
-	binary.LittleEndian.PutUint32(buffer[5:], reportInterval)
-	binary.LittleEndian.PutUint32(buffer[13:], sensorSpecificConfig)
+	tinygobuffers.Uint32ToBytesLE(reportInterval, buffer[5:])
+	tinygobuffers.Uint32ToBytesLE(sensorSpecificConfig, buffer[13:])
 	return tinygotypes.ErrorCodeNil
 }
 
@@ -245,14 +244,20 @@ func newGetFeatureReport(report report) (
 		return getFeatureReport{}, ErrorCodeBNO08XInvalidReportLength
 	}
 
+	// Parse the get feature report fields
+	changeSensitivity, _ := tinygobuffers.BytesToUint16LE(report.Data[3:5])
+	reportInterval, _ := tinygobuffers.BytesToUint32LE(report.Data[5:9])
+	batchIntervalWord, _ := tinygobuffers.BytesToUint32LE(report.Data[9:13])
+	sensorSpecificConfigWord, _ := tinygobuffers.BytesToUint32LE(report.Data[13:17])
+
 	return getFeatureReport{
 		ReportID:                 report.Data[0],
 		FeatureReportID:          report.Data[1],
 		FeatureFlags:             report.Data[2],
-		ChangeSensitivity:        binary.LittleEndian.Uint16(report.Data[3:5]),
-		ReportInterval:           binary.LittleEndian.Uint32(report.Data[5:9]),
-		BatchIntervalWord:        binary.LittleEndian.Uint32(report.Data[9:13]),
-		SensorSpecificConfigWord: binary.LittleEndian.Uint32(report.Data[13:17]),
+		ChangeSensitivity:        changeSensitivity,
+		ReportInterval:           reportInterval,
+		BatchIntervalWord:        batchIntervalWord,
+		SensorSpecificConfigWord: sensorSpecificConfigWord,
 	}, tinygotypes.ErrorCodeNil
 }
 
@@ -276,8 +281,11 @@ func newShakeReport(report report) (shakeReport, tinygotypes.ErrorCode) {
 		return shakeReport{}, ErrorCodeBNO08XInvalidReportLength
 	}
 
+	// Check if shakes are detected
+	areShakesDetected, _ := tinygobuffers.BytesToUint16LE(report.Data[4:6])
+
 	return shakeReport{
-		AreShakesDetected: binary.LittleEndian.Uint16(report.Data[4:6])&0x111 > 0,
+		AreShakesDetected: areShakesDetected&0x111 > 0,
 	}, tinygotypes.ErrorCodeNil
 }
 
@@ -301,8 +309,11 @@ func newStepCounterReport(report report) (stepCounterReport, tinygotypes.ErrorCo
 		return stepCounterReport{}, ErrorCodeBNO08XInvalidReportLength
 	}
 
+	// Parse and return the step count
+	stepCount, _ := tinygobuffers.BytesToUint16LE(report.Data[8:10])
+
 	return stepCounterReport{
-		Count: binary.LittleEndian.Uint16(report.Data[8:10]),
+		Count: stepCount,
 	}, tinygotypes.ErrorCodeNil
 }
 
@@ -361,12 +372,17 @@ func newSensorID(report report) (sensorID, tinygotypes.ErrorCode) {
 		return sensorID{}, ErrorCodeBNO08XInvalidReportLength
 	}
 
+	// Parse and return the sensor ID fields
+	softwarePatchVersion, _ := tinygobuffers.BytesToUint16LE(report.Data[12:14])
+	softwarePartNumber, _ := tinygobuffers.BytesToUint32LE(report.Data[4:8])
+	softwareBuildNumber, _ := tinygobuffers.BytesToUint32LE(report.Data[8:12])
+
 	return sensorID{
 		SoftwareMajorVersion: report.Data[2],
 		SoftwareMinorVersion: report.Data[3],
-		SoftwarePatchVersion: binary.LittleEndian.Uint16(report.Data[12:14]),
-		SoftwarePartNumber:   binary.LittleEndian.Uint32(report.Data[4:8]),
-		SoftwareBuildNumber:  binary.LittleEndian.Uint32(report.Data[8:12]),
+		SoftwarePatchVersion: softwarePatchVersion,
+		SoftwarePartNumber:   softwarePartNumber,
+		SoftwareBuildNumber:  softwareBuildNumber,
 	}, tinygotypes.ErrorCodeNil
 }
 
@@ -537,10 +553,11 @@ func newSensorReportData(report report) (sensorReportData, tinygotypes.ErrorCode
 
 		// Read the raw data from the report bytes
 		var rawData float64
+		rawDataUint16 := tinygobuffers.BytesToUint16LE(report.Data[totalOffset : totalOffset+2])
 		if formatUnsigned {
-			rawData = float64(binary.LittleEndian.Uint16(report.Data[totalOffset : totalOffset+2]))
+			rawData = float64(rawDataUint16)
 		} else {
-			rawData = float64(int16(binary.LittleEndian.Uint16(report.Data[totalOffset : totalOffset+2])))
+			rawData = float64(int16(rawDataUint16))
 		}
 		scaledData := rawData * scalar
 		results = append(results, scaledData)

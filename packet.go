@@ -3,10 +3,9 @@
 package tinygo_bno08x
 
 import (
-	"encoding/binary"
-
 	tinygotypes "github.com/ralvarezdev/tinygo-types"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
+	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 )
 
 type (
@@ -496,7 +495,7 @@ func NewPacketHeaderFromBuffer(buffer []byte) (PacketHeader, tinygotypes.ErrorCo
 	}
 
 	// Parse the header fields from the buffer
-	packetByteCount := binary.LittleEndian.Uint16(buffer[0:2])
+	packetByteCount, _ := tinygobuffers.BytesToUint16LE(buffer[0:2])
 	packetByteCount &= 0x7FFF
 	channelNumber := buffer[2]
 	sequenceNumber := buffer[3]
