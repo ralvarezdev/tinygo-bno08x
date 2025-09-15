@@ -1,5 +1,3 @@
-//go:build tinygo && (rp2040 || rp2350)
-
 package tinygo_bno08x
 
 import (
@@ -7,7 +5,7 @@ import (
 
 	"machine"
 
-	tinygotypes "github.com/ralvarezdev/tinygo-types"
+	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
 )
 
@@ -74,7 +72,7 @@ func HardwareReset(resetPin machine.Pin, logger tinygologger.Logger) {
 //
 // An error if the packet writer or waitForPacket function is nil, if sending the reset command fails,
 // or if there are issues while waiting for packets during the reset process.
-func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologger.Logger, waitForPacketFn func(time.Duration) (Packet, tinygotypes.ErrorCode)) tinygotypes.ErrorCode {
+func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologger.Logger, waitForPacketFn func(time.Duration) (Packet, tinygoerrors.ErrorCode)) tinygoerrors.ErrorCode {
 	// Check if the packet writer is nil
 	if packetWriter == nil {
 		return ErrorCodeBNO08XNilPacketWriter
@@ -92,7 +90,7 @@ func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologge
 	}
 
 	// Send the reset command
-	if _, err := packetWriter.SendPacket(ChannelExe, ExecCommandResetData); err != tinygotypes.ErrorCodeNil {
+	if _, err := packetWriter.SendPacket(ChannelExe, ExecCommandResetData); err != tinygoerrors.ErrorCodeNil {
 		return ErrorCodeBNO08XFailedToSendResetCommandRequestPacket
 	}
 
@@ -106,7 +104,7 @@ func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologge
 		if err == ErrorCodeBNO08XWaitingForPacketTimedOut {
 			break
 		}
-		if err != tinygotypes.ErrorCodeNil {
+		if err != tinygoerrors.ErrorCodeNil {
 			logger.WarningMessageWithErrorCode(errorWaitingForPacket, err, true)
 			continue
 		}
@@ -125,7 +123,7 @@ func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologge
 	if logger != nil {
 		logger.InfoMessage(softwareResetComplete)
 	}
-	return tinygotypes.ErrorCodeNil
+	return tinygoerrors.ErrorCodeNil
 }
 
 // SoftwareResetForUARTMode performs a software reset of the BNO08X sensor when operating in UART mode.
@@ -140,7 +138,7 @@ func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologge
 //
 // An error if the packet writer or waitForPacket function is nil, if sending the reset command fails,
 // or if there are issues while waiting for packets during the reset process.
-func SoftwareResetForUARTMode(packetWriter PacketWriter, logger tinygologger.Logger, waitForPacketFn func(time.Duration) (Packet, tinygotypes.ErrorCode)) tinygotypes.ErrorCode {
+func SoftwareResetForUARTMode(packetWriter PacketWriter, logger tinygologger.Logger, waitForPacketFn func(time.Duration) (Packet, tinygoerrors.ErrorCode)) tinygoerrors.ErrorCode {
 	// Check if the packet writer is nil
 	if packetWriter == nil {
 		return ErrorCodeBNO08XNilPacketWriter
@@ -163,7 +161,7 @@ func SoftwareResetForUARTMode(packetWriter PacketWriter, logger tinygologger.Log
 		if err == ErrorCodeBNO08XWaitingForPacketTimedOut {
 			break
 		}
-		if err != tinygotypes.ErrorCodeNil {
+		if err != tinygoerrors.ErrorCodeNil {
 			logger.WarningMessageWithErrorCode(errorWaitingForPacket, err, true)
 			continue
 		}
@@ -180,7 +178,7 @@ func SoftwareResetForUARTMode(packetWriter PacketWriter, logger tinygologger.Log
 	}
 
 	// Send the reset command
-	if _, err := packetWriter.SendPacket(ChannelExe, ExecCommandResetData); err != tinygotypes.ErrorCodeNil {
+	if _, err := packetWriter.SendPacket(ChannelExe, ExecCommandResetData); err != tinygoerrors.ErrorCodeNil {
 		return ErrorCodeBNO08XFailedToSendResetCommandRequestPacket
 	}
 
@@ -190,5 +188,5 @@ func SoftwareResetForUARTMode(packetWriter PacketWriter, logger tinygologger.Log
 	if logger != nil {
 		logger.InfoMessage(softwareResetComplete)
 	}
-	return tinygotypes.ErrorCodeNil
+	return tinygoerrors.ErrorCodeNil
 }

@@ -1,5 +1,3 @@
-//go:build tinygo && (rp2040 || rp2350)
-
 package tinygo_bno08x
 
 import (
@@ -7,7 +5,7 @@ import (
 
 	"machine"
 
-	tinygotypes "github.com/ralvarezdev/tinygo-types"
+	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
 )
 
@@ -64,10 +62,10 @@ func NewUART(
 	ps1Pin machine.Pin,
 	resetPin machine.Pin,
 	packetBuffer PacketBuffer,
-	afterResetFn func(b *BNO08X) tinygotypes.ErrorCode,
+	afterResetFn func(b *BNO08X) tinygoerrors.ErrorCode,
 	logger tinygologger.Logger,
 	ultraDebug bool,
-) (*UART, tinygotypes.ErrorCode) {
+) (*UART, tinygoerrors.ErrorCode) {
 	// Check if the UART bus is nil
 	if uartBus == nil {
 		return nil, ErrorCodeBNO08XNilUARTBus
@@ -104,7 +102,7 @@ func NewUART(
 		logger,
 		ultraDebug,
 	)
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return nil, ErrorCodeBNO08XFailedToCreatePacketReader
 	}
 
@@ -114,7 +112,7 @@ func NewUART(
 		logger,
 		ultraDebug,
 	)
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return nil, ErrorCodeBNO08XFailedToCreatePacketWriter
 	}
 
@@ -128,7 +126,7 @@ func NewUART(
 		afterResetFn,
 		logger,
 	)
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return nil, err
 	}
 
@@ -138,7 +136,7 @@ func NewUART(
 		ps1Pin:   ps1Pin,
 		ps0Pin:   ps0Pin,
 		resetPin: resetPin,
-	}, tinygotypes.ErrorCodeNil
+	}, tinygoerrors.ErrorCodeNil
 }
 
 // GetBNO08X returns the BNO08X instance.
@@ -167,7 +165,7 @@ func newUARTPacketReader(
 	packetBuffer PacketBuffer,
 	logger tinygologger.Logger,
 	ultraDebug bool,
-) (*UARTPacketReader, tinygotypes.ErrorCode) {
+) (*UARTPacketReader, tinygoerrors.ErrorCode) {
 	// Check if the UART bus is nil
 	if uartBus == nil {
 		return nil, ErrorCodeBNO08XNilUARTBus
@@ -183,7 +181,7 @@ func newUARTPacketReader(
 		logger:   logger,
 		packetBuffer: packetBuffer,
 		ultraDebug: ultraDebug,
-	}, tinygotypes.ErrorCodeNil
+	}, tinygoerrors.ErrorCodeNil
 }
 
 var (
@@ -208,7 +206,7 @@ func (pr *UARTPacketReader) IsAvailableToRead() bool {
 // Returns:
 //
 // A byte read from UART and an error if any.
-func (pr *UARTPacketReader) readByte() (byte, tinygotypes.ErrorCode) {
+func (pr *UARTPacketReader) readByte() (byte, tinygoerrors.ErrorCode) {
 	startTime := time.Now()
 	for time.Since(startTime) < UARTByteTimeout {
 		if pr.uartBus.Buffered() > 0 {
@@ -220,7 +218,7 @@ func (pr *UARTPacketReader) readByte() (byte, tinygotypes.ErrorCode) {
 				pr.logger.AddMessageWithUint8(receivedBytePrefix, b, true, true, true)
 				pr.logger.Debug()
 			}
-			return b, tinygotypes.ErrorCodeNil
+			return b, tinygoerrors.ErrorCodeNil
 		}
 	}
 	return 0, ErrorCodeBNO08XUARTByteTimeout
@@ -237,7 +235,7 @@ func (pr *UARTPacketReader) readByte() (byte, tinygotypes.ErrorCode) {
 // Returns:
 //
 // An error if any occurs during reading.
-func (pr *UARTPacketReader) readInto(buffer []byte, start int, end int) tinygotypes.ErrorCode {
+func (pr *UARTPacketReader) readInto(buffer []byte, start int, end int) tinygoerrors.ErrorCode {
 	// Check if the buffer slice is nil
 	if buffer == nil {
 		return ErrorCodeBNO08XNilDestinationBuffer
@@ -251,19 +249,19 @@ func (pr *UARTPacketReader) readInto(buffer []byte, start int, end int) tinygoty
 	// Read bytes into the buffer slice
 	for i := start; i < end; i++ {
 		b, err := pr.readByte()
-		if err != tinygotypes.ErrorCodeNil {
+		if err != tinygoerrors.ErrorCodeNil {
 			return err
 		}
 		if b == UARTControlEscape {
 			nb, err := pr.readByte()
-			if err != tinygotypes.ErrorCodeNil {
+			if err != tinygoerrors.ErrorCodeNil {
 				return err
 			}
 			b = nb ^ UARTXORByte
 		}
 		buffer[i] = b
 	}
-	return tinygotypes.ErrorCodeNil
+	return tinygoerrors.ErrorCodeNil
 }
 
 // readHeader reads the UART packet header.
@@ -271,11 +269,11 @@ func (pr *UARTPacketReader) readInto(buffer []byte, start int, end int) tinygoty
 // Returns:
 //
 // An error if any occurs during reading.
-func (pr *UARTPacketReader) readHeader() tinygotypes.ErrorCode {
+func (pr *UARTPacketReader) readHeader() tinygoerrors.ErrorCode {
 	// Find first initial start byte
 	for {
 		b, err := pr.readByte()
-		if err != tinygotypes.ErrorCodeNil {
+		if err != tinygoerrors.ErrorCodeNil {
 			return err
 		}
 		if b == UARTStartAndEndByte {
@@ -285,13 +283,13 @@ func (pr *UARTPacketReader) readHeader() tinygotypes.ErrorCode {
 
 	// Read protocol ID sequence
 	data, err := pr.readByte()
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return err
 	}
 	if data == UARTStartAndEndByte {
 		// Consume next (real protocol byte)
 		data, err = pr.readByte()
-		if err != tinygotypes.ErrorCodeNil {
+		if err != tinygoerrors.ErrorCodeNil {
 			return err
 		}
 	}
@@ -306,16 +304,16 @@ func (pr *UARTPacketReader) readHeader() tinygotypes.ErrorCode {
 // Returns:
 //
 // A Packet object and an error if any occurs.
-func (pr *UARTPacketReader) ReadPacket() (Packet, tinygotypes.ErrorCode) {
+func (pr *UARTPacketReader) ReadPacket() (Packet, tinygoerrors.ErrorCode) {
 	// Read packet header
-	if err := pr.readHeader(); err != tinygotypes.ErrorCodeNil {
+	if err := pr.readHeader(); err != tinygoerrors.ErrorCodeNil {
 		return Packet{}, err
 	}
 
 	// Parse header
 	packetBuffer := pr.packetBuffer.GetBuffer()
 	header, err := NewPacketHeaderFromBuffer(packetBuffer[:PacketHeaderLength])
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return Packet{}, err
 	}
 	if header.PacketByteCount == 0 {
@@ -341,13 +339,13 @@ func (pr *UARTPacketReader) ReadPacket() (Packet, tinygotypes.ErrorCode) {
 		packetBuffer[PacketHeaderLength:header.PacketByteCount],
 		0,
 		int(header.DataLength),
-	); err != tinygotypes.ErrorCodeNil {
+	); err != tinygoerrors.ErrorCodeNil {
 		return Packet{}, err
 	}
 
 	// Expect trailing 0x7E
 	endByte, err := pr.readByte()
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return Packet{}, err
 	}
 	if endByte != UARTStartAndEndByte {
@@ -356,13 +354,13 @@ func (pr *UARTPacketReader) ReadPacket() (Packet, tinygotypes.ErrorCode) {
 
 	// Initialize packet
 	packet, err := NewPacket(packetBuffer[PacketHeaderLength:header.PacketByteCount], header)
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return Packet{}, err
 	}
 
 	// Log the packet
 	packet.Log(false, false, pr.logger)
-	return packet, tinygotypes.ErrorCodeNil
+	return packet, tinygoerrors.ErrorCodeNil
 }
 
 // newUARTPacketWriter creates a new UARTPacketWriter instance.
@@ -382,7 +380,7 @@ func newUARTPacketWriter(
 	packetBuffer PacketBuffer,
 	logger tinygologger.Logger,
 	ultraDebug bool,
-) (*UARTPacketWriter, tinygotypes.ErrorCode) {
+) (*UARTPacketWriter, tinygoerrors.ErrorCode) {
 	// Check if the UART bus is nil
 	if uartBus == nil {
 		return nil, ErrorCodeBNO08XNilUARTBus
@@ -398,7 +396,7 @@ func newUARTPacketWriter(
 		logger:   logger,
 		packetBuffer: packetBuffer,
 		ultraDebug: ultraDebug,
-	}, tinygotypes.ErrorCodeNil
+	}, tinygoerrors.ErrorCodeNil
 }
 
 // writeByte writes a byte to UART.
@@ -436,7 +434,7 @@ func (pw *UARTPacketWriter) writeByte(b byte, isData bool) {
 // The sequence number used and an error if any occurs.
 func (pw *UARTPacketWriter) SendPacket(channel uint8, data []byte) (
 	uint8,
-	tinygotypes.ErrorCode,
+	tinygoerrors.ErrorCode,
 ) {
 	// Check if the data is nil
 	if data == nil {
@@ -445,7 +443,7 @@ func (pw *UARTPacketWriter) SendPacket(channel uint8, data []byte) (
 
 	// Get channel sequence number
 	sequenceNumber, err := pw.packetBuffer.GetChannelSequenceNumber(channel)
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return 0, err
 	}
 
@@ -456,7 +454,7 @@ func (pw *UARTPacketWriter) SendPacket(channel uint8, data []byte) (
 		data,
 		pw.packetBuffer.GetBuffer()[:PacketHeaderLength], // Reuse header buffer
 	)
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return 0, err
 	}
 
@@ -484,8 +482,8 @@ func (pw *UARTPacketWriter) SendPacket(channel uint8, data []byte) (
 
 	// Update sequence number
 	sequenceNumber, err = pw.packetBuffer.IncrementChannelSequenceNumber(channel)
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return 0, err
 	}
-	return sequenceNumber, tinygotypes.ErrorCodeNil
+	return sequenceNumber, tinygoerrors.ErrorCodeNil
 }

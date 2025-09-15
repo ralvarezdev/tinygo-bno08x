@@ -1,9 +1,7 @@
-//go:build tinygo && (rp2040 || rp2350)
-
 package tinygo_bno08x
 
 import (
-	tinygotypes "github.com/ralvarezdev/tinygo-types"
+	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 )
 
 type (
@@ -43,12 +41,12 @@ func (pb *DefaultPacketBuffer) GetBuffer() []byte {
 // Returns:
 //
 // An error if the index is out of range, otherwise nil.
-func (pb *DefaultPacketBuffer) SetBufferValue(index int, value byte) tinygotypes.ErrorCode {
+func (pb *DefaultPacketBuffer) SetBufferValue(index int, value byte) tinygoerrors.ErrorCode {
 	if index < 0 || index >= len(pb.buffer) {
 		return ErrorCodeBNO08XPacketBufferIndexOutOfRange
 	}
 	pb.buffer[index] = value
-	return tinygotypes.ErrorCodeNil
+	return tinygoerrors.ErrorCodeNil
 }
 
 // SetBuffer sets the buffer with the provided data slice
@@ -60,12 +58,12 @@ func (pb *DefaultPacketBuffer) SetBufferValue(index int, value byte) tinygotypes
 // Returns:
 //
 // An error if the buffer slice is nil or exceeds the buffer size, otherwise nil.
-func (pb *DefaultPacketBuffer) SetBuffer(buffer []byte) tinygotypes.ErrorCode {
+func (pb *DefaultPacketBuffer) SetBuffer(buffer []byte) tinygoerrors.ErrorCode {
 	if buffer == nil {
 		return ErrorCodeBNO08XNilPacketBuffer
 	}
 	pb.buffer = buffer
-	return tinygotypes.ErrorCodeNil
+	return tinygoerrors.ErrorCodeNil
 }
 
 // ClearBuffer clears the buffer
@@ -84,11 +82,11 @@ func (pb *DefaultPacketBuffer) ClearBuffer() {
 // Returns:
 //
 //	An error if the channel number is invalid, otherwise nil.
-func (pb *DefaultPacketBuffer) validateChannelNumber(channel uint8) tinygotypes.ErrorCode {
+func (pb *DefaultPacketBuffer) validateChannelNumber(channel uint8) tinygoerrors.ErrorCode {
 	if int(channel) < 0 || int(channel) >= len(pb.sequenceNumber) {
 		return ErrorCodeBNO08XInvalidChannelNumber
 	}
-	return tinygotypes.ErrorCodeNil
+	return tinygoerrors.ErrorCodeNil
 }
 
 // IncrementChannelSequenceNumber increments the sequence number for the given channel by the specified amount.
@@ -103,17 +101,17 @@ func (pb *DefaultPacketBuffer) validateChannelNumber(channel uint8) tinygotypes.
 //	The new sequence number for the channel, or an error if the channel is invalid.
 func (pb *DefaultPacketBuffer) IncrementChannelSequenceNumber(channel uint8) (
 	uint8,
-	tinygotypes.ErrorCode,
+	tinygoerrors.ErrorCode,
 ) {
 	// Validate the channel number
-	if err := pb.validateChannelNumber(channel); err != tinygotypes.ErrorCodeNil {
+	if err := pb.validateChannelNumber(channel); err != tinygoerrors.ErrorCodeNil {
 		return 0, err
 	}
 
 	// Increment the sequence number and wrap at 256
 	newSequenceNumber := pb.sequenceNumber[int(channel)] + 1
 	pb.sequenceNumber[int(channel)] = newSequenceNumber
-	return newSequenceNumber, tinygotypes.ErrorCodeNil
+	return newSequenceNumber, tinygoerrors.ErrorCodeNil
 }
 
 // GetChannelSequenceNumber returns the cached sequence number for the given channel.
@@ -125,14 +123,14 @@ func (pb *DefaultPacketBuffer) IncrementChannelSequenceNumber(channel uint8) (
 // Returns:
 //
 //	The cached sequence number for the channel, or -1 if the channel is invalid.
-func (pb *DefaultPacketBuffer) GetChannelSequenceNumber(channel uint8) (uint8, tinygotypes.ErrorCode) {
+func (pb *DefaultPacketBuffer) GetChannelSequenceNumber(channel uint8) (uint8, tinygoerrors.ErrorCode) {
 	// Validate the channel number
-	if err := pb.validateChannelNumber(channel); err != tinygotypes.ErrorCodeNil {
+	if err := pb.validateChannelNumber(channel); err != tinygoerrors.ErrorCodeNil {
 		return 0, err
 	}
 
 	// Return the sequence number for the channel
-	return pb.sequenceNumber[int(channel)], tinygotypes.ErrorCodeNil
+	return pb.sequenceNumber[int(channel)], tinygoerrors.ErrorCodeNil
 }
 
 // SetSequenceNumber sets the cached sequence number for the given channel.
@@ -148,15 +146,15 @@ func (pb *DefaultPacketBuffer) GetChannelSequenceNumber(channel uint8) (uint8, t
 func (pb *DefaultPacketBuffer) SetSequenceNumber(
 	channel uint8,
 	sequenceNumber uint8,
-) tinygotypes.ErrorCode {
+) tinygoerrors.ErrorCode {
 	// Validate the channel number
-	if err := pb.validateChannelNumber(channel); err != tinygotypes.ErrorCodeNil {
+	if err := pb.validateChannelNumber(channel); err != tinygoerrors.ErrorCodeNil {
 		return err
 	}
 
 	// Set the sequence number for the channel
 	pb.sequenceNumber[int(channel)] = sequenceNumber
-	return tinygotypes.ErrorCodeNil
+	return tinygoerrors.ErrorCodeNil
 }
 
 // IncrementReportSequenceNumber increments the sequence number for the given report ID, wrapping at 256.

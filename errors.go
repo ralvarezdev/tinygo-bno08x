@@ -1,9 +1,7 @@
-//go:build tinygo && (rp2040 || rp2350)
-
 package tinygo_bno08x
 
 import (
-	tinygotypes "github.com/ralvarezdev/tinygo-types"
+	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 )
 
 const (
@@ -12,7 +10,7 @@ const (
 )
 
 const (
-	ErrorCodeBNO08XPacketBufferIndexOutOfRange tinygotypes.ErrorCode = tinygotypes.ErrorCode(iota + ErrorCodeBNO08XStartNumber)
+	ErrorCodeBNO08XPacketBufferIndexOutOfRange tinygoerrors.ErrorCode = tinygoerrors.ErrorCode(iota + ErrorCodeBNO08XStartNumber)
 	ErrorCodeBNO08XInvalidChannelNumber
 	ErrorCodeBNO08XNilPacketReader
 	ErrorCodeBNO08XNilPacketWriter

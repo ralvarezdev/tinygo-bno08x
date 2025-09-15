@@ -1,9 +1,7 @@
-//go:build tinygo && (rp2040 || rp2350)
-
 package tinygo_bno08x
 
 import (
-	tinygotypes "github.com/ralvarezdev/tinygo-types"
+	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 )
 
 type (
@@ -89,16 +87,16 @@ const (
 // Returns:
 //
 // The ReportAccuracyStatus enum value, or an error if the key wasn't found for the given value
-func ReportAccuracyStatusFromUint8(value uint8) (ReportAccuracyStatus, tinygotypes.ErrorCode) {
+func ReportAccuracyStatusFromUint8(value uint8) (ReportAccuracyStatus, tinygoerrors.ErrorCode) {
 	switch ReportAccuracyStatus(value) {
 	case ReportAccuracyStatusUnreliable:
-		return ReportAccuracyStatusUnreliable, tinygotypes.ErrorCodeNil
+		return ReportAccuracyStatusUnreliable, tinygoerrors.ErrorCodeNil
 	case ReportAccuracyStatusLow:
-		return ReportAccuracyStatusLow, tinygotypes.ErrorCodeNil
+		return ReportAccuracyStatusLow, tinygoerrors.ErrorCodeNil
 	case ReportAccuracyStatusMedium:
-		return ReportAccuracyStatusMedium, tinygotypes.ErrorCodeNil
+		return ReportAccuracyStatusMedium, tinygoerrors.ErrorCodeNil
 	case ReportAccuracyStatusHigh:
-		return ReportAccuracyStatusHigh, tinygotypes.ErrorCodeNil
+		return ReportAccuracyStatusHigh, tinygoerrors.ErrorCodeNil
 	default:
 		return ReportAccuracyStatusNil, ErrorCodeBNO08XInvalidReportAccuracyStatusUint8
 	}
@@ -113,26 +111,26 @@ func ReportAccuracyStatusFromUint8(value uint8) (ReportAccuracyStatus, tinygotyp
 // Returns:
 //
 // The ReportActivity enum value, or an error if the key wasn't found for the given value
-func ReportActivityFromUint8(value uint8) (ReportActivity, tinygotypes.ErrorCode) {
+func ReportActivityFromUint8(value uint8) (ReportActivity, tinygoerrors.ErrorCode) {
 	switch ReportActivity(value) {
 	case ReportActivityUnknown:
-		return ReportActivityUnknown, tinygotypes.ErrorCodeNil
+		return ReportActivityUnknown, tinygoerrors.ErrorCodeNil
 	case ReportActivityInVehicle:
-		return ReportActivityInVehicle, tinygotypes.ErrorCodeNil
+		return ReportActivityInVehicle, tinygoerrors.ErrorCodeNil
 	case ReportActivityOnBicycle:
-		return ReportActivityOnBicycle, tinygotypes.ErrorCodeNil
+		return ReportActivityOnBicycle, tinygoerrors.ErrorCodeNil
 	case ReportActivityOnFoot:
-		return ReportActivityOnFoot, tinygotypes.ErrorCodeNil
+		return ReportActivityOnFoot, tinygoerrors.ErrorCodeNil
 	case ReportActivityStill:
-		return ReportActivityStill, tinygotypes.ErrorCodeNil	
+		return ReportActivityStill, tinygoerrors.ErrorCodeNil	
 	case ReportActivityTilting:
-		return ReportActivityTilting, tinygotypes.ErrorCodeNil
+		return ReportActivityTilting, tinygoerrors.ErrorCodeNil
 	case ReportActivityWalking:
-		return ReportActivityWalking, tinygotypes.ErrorCodeNil
+		return ReportActivityWalking, tinygoerrors.ErrorCodeNil
 	case ReportActivityRunning:
-		return ReportActivityRunning, tinygotypes.ErrorCodeNil
+		return ReportActivityRunning, tinygoerrors.ErrorCodeNil
 	case ReportActivityOnStairs:
-		return ReportActivityOnStairs, tinygotypes.ErrorCodeNil
+		return ReportActivityOnStairs, tinygoerrors.ErrorCodeNil
 	default:
 		return ReportActivityNil, ErrorCodeBNO08XInvalidReportActivityUint8
 	}
@@ -147,18 +145,18 @@ func ReportActivityFromUint8(value uint8) (ReportActivity, tinygotypes.ErrorCode
 // Returns:
 //
 // The ReportStabilityClassification enum value, or an error if the key wasn't found for the given value
-func ReportStabilityClassificationFromUint8(value uint8) (ReportStabilityClassification, tinygotypes.ErrorCode) {
+func ReportStabilityClassificationFromUint8(value uint8) (ReportStabilityClassification, tinygoerrors.ErrorCode) {
 	switch ReportStabilityClassification(value) {
 	case ReportStabilityClassificationUnknown:
-		return ReportStabilityClassificationUnknown, tinygotypes.ErrorCodeNil
+		return ReportStabilityClassificationUnknown, tinygoerrors.ErrorCodeNil
 	case ReportStabilityClassificationOnTable:
-		return ReportStabilityClassificationOnTable, tinygotypes.ErrorCodeNil
+		return ReportStabilityClassificationOnTable, tinygoerrors.ErrorCodeNil
 	case ReportStabilityClassificationStationary:
-		return ReportStabilityClassificationStationary, tinygotypes.ErrorCodeNil
+		return ReportStabilityClassificationStationary, tinygoerrors.ErrorCodeNil
 	case ReportStabilityClassificationStable:
-		return ReportStabilityClassificationStable, tinygotypes.ErrorCodeNil
+		return ReportStabilityClassificationStable, tinygoerrors.ErrorCodeNil
 	case ReportStabilityClassificationInMotion:
-		return ReportStabilityClassificationInMotion, tinygotypes.ErrorCodeNil
+		return ReportStabilityClassificationInMotion, tinygoerrors.ErrorCodeNil
 	default:
 		return ReportStabilityClassificationNil, ErrorCodeBNO08XInvalidReportStabilityClassificationUint8
 	}

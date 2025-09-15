@@ -1,5 +1,3 @@
-//go:build tinygo && (rp2040 || rp2350)
-
 package tinygo_bno08x
 
 import (
@@ -7,7 +5,7 @@ import (
 
 	"machine"
 
-	tinygotypes "github.com/ralvarezdev/tinygo-types"
+	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
 	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 )
@@ -64,7 +62,7 @@ func NewUARTRVC(
 	ps1Pin machine.Pin,
 	resetPin machine.Pin,
 	logger tinygologger.Logger,
-) (*UARTRVC, tinygotypes.ErrorCode) {
+) (*UARTRVC, tinygoerrors.ErrorCode) {
 	// Check if the UART bus is nil
 	if uartBus == nil {
 		return nil, ErrorCodeBNO08XNilUARTBus
@@ -104,10 +102,10 @@ func NewUARTRVC(
 	}
 
 	// Perform reset
-	if err := uartRVC.Reset(); err != tinygotypes.ErrorCodeNil {
+	if err := uartRVC.Reset(); err != tinygoerrors.ErrorCodeNil {
 		return nil, ErrorCodeBNO08XFailedToResetUARTRVC
 	}
-	return uartRVC, tinygotypes.ErrorCodeNil
+	return uartRVC, tinygoerrors.ErrorCodeNil
 }
 
 // Reset performs a hardware reset of the BNO08X sensor using the specified reset pin.
@@ -115,9 +113,9 @@ func NewUARTRVC(
 // Returns:
 //
 // An error if the reset process fails, otherwise nil.
-func (u *UARTRVC) Reset() tinygotypes.ErrorCode  {
+func (u *UARTRVC) Reset() tinygoerrors.ErrorCode  {
 	HardwareReset(u.resetPin, u.logger)
-	return tinygotypes.ErrorCodeNil
+	return tinygoerrors.ErrorCodeNil
 }
 
 // ParseFrame parses a heading frame from the BNO08x RVC.
@@ -125,7 +123,7 @@ func (u *UARTRVC) Reset() tinygotypes.ErrorCode  {
 // Returns:
 //
 // An error if parsing fails.
-func (u *UARTRVC) ParseFrame() tinygotypes.ErrorCode {
+func (u *UARTRVC) ParseFrame() tinygoerrors.ErrorCode {
 	// Retrieve and parse fields from the frame
 	// index := u.buffer[2
 	yaw, _ := tinygobuffers.BytesToUint16LE(u.buffer[3:5])
@@ -160,7 +158,7 @@ func (u *UARTRVC) ParseFrame() tinygotypes.ErrorCode {
 	u.accelerometer[ThreeDimensionalXIndex] = float64(xAccel) * MilligToMeterPerSecondSquared
 	u.accelerometer[ThreeDimensionalYIndex] = float64(yAccel) * MilligToMeterPerSecondSquared
 	u.accelerometer[ThreeDimensionalZIndex] = float64(zAccel) * MilligToMeterPerSecondSquared
-	return tinygotypes.ErrorCodeNil
+	return tinygoerrors.ErrorCodeNil
 }
 
 // readByte blocks until a byte is read (simple poll).
@@ -168,12 +166,12 @@ func (u *UARTRVC) ParseFrame() tinygotypes.ErrorCode {
 // Returns:
 //
 // A byte read from UART and an error if any.
-func (u *UARTRVC) readByte() (byte, tinygotypes.ErrorCode) {
+func (u *UARTRVC) readByte() (byte, tinygoerrors.ErrorCode) {
 	startTime := time.Now()
 	for time.Since(startTime) < UARTByteTimeout {
 		if u.uartBus.Buffered() > 0 {
 			if b, err := u.uartBus.ReadByte(); err == nil {
-				return b, tinygotypes.ErrorCodeNil
+				return b, tinygoerrors.ErrorCodeNil
 			}
 			return 0, ErrorCodeBNO08XUARTRVCFailedToReadByte
 		}
@@ -186,7 +184,7 @@ func (u *UARTRVC) readByte() (byte, tinygotypes.ErrorCode) {
 // Returns:
 //
 // An error if reading fails or times out.
-func (u *UARTRVC) Read() tinygotypes.ErrorCode {
+func (u *UARTRVC) Read() tinygoerrors.ErrorCode {
 	// Clear frame buffer
 	for i := range u.buffer {
 		u.buffer[i] = 0
@@ -199,7 +197,7 @@ func (u *UARTRVC) Read() tinygotypes.ErrorCode {
 		processedBytes := 0
 		for processedBytes < UARTRVCHeaderLength {
 			b, err := u.readByte()
-			if err != tinygotypes.ErrorCodeNil {
+			if err != tinygoerrors.ErrorCodeNil {
 				return err
 			}
 			u.buffer[processedBytes] = b
@@ -223,7 +221,7 @@ func (u *UARTRVC) Read() tinygotypes.ErrorCode {
 		// We have the start bytes, read the rest of the frame
 		for processedBytes < UARTRVCPacketLengthBytes {
 			b, err := u.readByte()
-			if err != tinygotypes.ErrorCodeNil {
+			if err != tinygoerrors.ErrorCodeNil {
 				return err
 			}
 			u.buffer[processedBytes] = b
@@ -236,13 +234,13 @@ func (u *UARTRVC) Read() tinygotypes.ErrorCode {
 		}
 
 		// Parse the frame
-		if err := u.ParseFrame(); err != tinygotypes.ErrorCodeNil {
+		if err := u.ParseFrame(); err != tinygoerrors.ErrorCodeNil {
 			if u.logger != nil {
 				u.logger.WarningMessage(failedToParseFrameMessage)
 			}
 			return ErrorCodeBNO08XFailedToParseFrame
 		}
-		return tinygotypes.ErrorCodeNil
+		return tinygoerrors.ErrorCodeNil
 	}
 	return ErrorCodeBNO08XUARTRVCUARTTimeout
 }
@@ -252,7 +250,7 @@ func (u *UARTRVC) Read() tinygotypes.ErrorCode {
 // Returns:
 //
 // An error if reading or parsing the frame fails.
-func (u *UARTRVC) Update() tinygotypes.ErrorCode {
+func (u *UARTRVC) Update() tinygoerrors.ErrorCode {
 	return u.Read()
 }
 

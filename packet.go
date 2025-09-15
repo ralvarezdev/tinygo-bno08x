@@ -1,9 +1,7 @@
-//go:build tinygo && (rp2040 || rp2350)
-
 package tinygo_bno08x
 
 import (
-	tinygotypes "github.com/ralvarezdev/tinygo-types"
+	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
 	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 )
@@ -448,7 +446,7 @@ func NewPacketHeader(
 	channelNumber uint8,
 	sequenceNumber uint8,
 	buffer []byte,
-) (PacketHeader, tinygotypes.ErrorCode) {
+) (PacketHeader, tinygoerrors.ErrorCode) {
 	dataLength := int(packetByteCount) - PacketHeaderLength
 	if dataLength < 0 {
 		dataLength = 0
@@ -476,7 +474,7 @@ func NewPacketHeader(
 		DataLength:      dataLength,
 		PacketByteCount: int(packetByteCount),
 		Buffer:          buffer,
-	}, tinygotypes.ErrorCodeNil
+	}, tinygoerrors.ErrorCodeNil
 }
 
 // NewPacketHeaderFromBuffer creates a PacketHeader from a given buffer.
@@ -488,7 +486,7 @@ func NewPacketHeader(
 // Returns:
 //
 //	A PacketHeader object or an error if the buffer is too short.
-func NewPacketHeaderFromBuffer(buffer []byte) (PacketHeader, tinygotypes.ErrorCode) {
+func NewPacketHeaderFromBuffer(buffer []byte) (PacketHeader, tinygoerrors.ErrorCode) {
 	// Ensure the buffer is at least PacketHeaderLength bytes long to read the header
 	if len(buffer) < PacketHeaderLength {
 		return PacketHeader{}, ErrorCodeBNO08XPacketHeaderBufferTooShort
@@ -506,7 +504,7 @@ func NewPacketHeaderFromBuffer(buffer []byte) (PacketHeader, tinygotypes.ErrorCo
 		DataLength:      int(packetByteCount) - PacketHeaderLength,
 		PacketByteCount: int(packetByteCount),
 		Buffer:          buffer,
-	}, tinygotypes.ErrorCodeNil
+	}, tinygoerrors.ErrorCodeNil
 }
 
 // NewPacketHeaderFromData creates a PacketHeader from the provided data.
@@ -526,7 +524,7 @@ func NewPacketHeaderFromData(
 	sequenceNumber uint8,
 	data []byte,
 	headerBuffer []byte,
-) (PacketHeader, tinygotypes.ErrorCode) {
+) (PacketHeader, tinygoerrors.ErrorCode) {
 	// Check if data is nil
 	if data == nil {
 		return PacketHeader{}, ErrorCodeBNO08XNilReportData
@@ -542,11 +540,11 @@ func NewPacketHeaderFromData(
 		sequenceNumber,
 		headerBuffer,
 	)
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return PacketHeader{}, err
 	}
 
-	return header, tinygotypes.ErrorCodeNil
+	return header, tinygoerrors.ErrorCodeNil
 }
 
 // IsError checks if the provided PacketHeader indicates an error condition.
@@ -613,7 +611,7 @@ func (ph *PacketHeader) Log(isBeingSent bool, logger tinygologger.Logger) {
 // Returns:
 //
 // A Packet object or an error if the data or header is nil.
-func NewPacket(data []byte, header PacketHeader) (Packet, tinygotypes.ErrorCode) {
+func NewPacket(data []byte, header PacketHeader) (Packet, tinygoerrors.ErrorCode) {
 	// Check if data is nil
 	if data == nil {
 		return Packet{}, ErrorCodeBNO08XNilReportData
@@ -622,7 +620,7 @@ func NewPacket(data []byte, header PacketHeader) (Packet, tinygotypes.ErrorCode)
 	return Packet{
 		Header: header,
 		Data:   data,
-	}, tinygotypes.ErrorCodeNil
+	}, tinygoerrors.ErrorCodeNil
 }
 
 // NewPacketFromData creates a new Packet from the provided data.
@@ -642,7 +640,7 @@ func NewPacketFromData(
 	sequenceNumber uint8,
 	data []byte,
 	headerBuffer []byte,
-) (Packet, tinygotypes.ErrorCode) {
+) (Packet, tinygoerrors.ErrorCode) {
 	// Check if data is nil
 	if data == nil {
 		return Packet{}, ErrorCodeBNO08XNilReportData
@@ -655,14 +653,14 @@ func NewPacketFromData(
 		data,
 		headerBuffer,
 	)
-	if err != tinygotypes.ErrorCodeNil {
+	if err != tinygoerrors.ErrorCodeNil {
 		return Packet{}, err
 	}
 
 	return Packet{
 		Header: header,
 		Data:   data,
-	}, tinygotypes.ErrorCodeNil
+	}, tinygoerrors.ErrorCodeNil
 }
 
 // SequenceNumber returns the sequence number of the Packet.
@@ -679,11 +677,11 @@ func (p *Packet) SequenceNumber() uint8 {
 // Returns:
 //
 //	The report ID as an uint8 or an error if the data is too short.
-func (p *Packet) ReportID() (uint8, tinygotypes.ErrorCode) {
+func (p *Packet) ReportID() (uint8, tinygoerrors.ErrorCode) {
 	if len(p.Data) < 1 {
 		return 0, ErrorCodeBNO08XPacketDataTooShort
 	}
-	return p.Data[0], tinygotypes.ErrorCodeNil
+	return p.Data[0], tinygoerrors.ErrorCodeNil
 }
 
 // ChannelNumber returns the channel number of the Packet.
