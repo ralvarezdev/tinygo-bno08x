@@ -283,6 +283,9 @@ const (
 	// UARTControlEscape is the control escape byte for UART communication
 	UARTControlEscape = 0x7D
 
+	// UARTXORByte is the XOR character for UART communication
+	UARTXORByte = 0x20
+
 	// UARTByteTimeout is the timeout for reading a byte from UART communication
 	UARTByteTimeout = 50 * time.Millisecond
 

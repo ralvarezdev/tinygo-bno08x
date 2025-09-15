@@ -259,7 +259,7 @@ func (pr *UARTPacketReader) readInto(buffer []byte, start int, end int) tinygoty
 			if err != tinygotypes.ErrorCodeNil {
 				return err
 			}
-			b = nb ^ 0x20
+			b = nb ^ UARTXORByte
 		}
 		buffer[i] = b
 	}
@@ -412,7 +412,7 @@ func (pw *UARTPacketWriter) writeByte(b byte, isData bool) {
 	if isData && (b == UARTStartAndEndByte || b == UARTControlEscape) {
 		pw.uartBus.WriteByte(UARTControlEscape)
 		time.Sleep(UARTByteDelay)
-		b ^= 0x20
+		b ^= UARTXORByte
 	}
 
 	// Write byte to UART
