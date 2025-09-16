@@ -119,4 +119,7 @@ const (
 	ErrorCodeBNO08XNilWaitForPacketFunction
 	ErrorCodeBNO08XInvalidMode
 	ErrorCodeBNO08XUnknownModeAttemptingSoftwareReset
+	ErrorCodeBNO08XUARTRVCInvalidYawDegreesValue
+	ErrorCodeBNO08XUARTRVCInvalidPitchDegreesValue
+	ErrorCodeBNO08XUARTRVCInvalidRollDegreesValue
 )

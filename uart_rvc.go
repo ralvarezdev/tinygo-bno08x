@@ -125,13 +125,13 @@ func (u *UARTRVC) Reset() tinygoerrors.ErrorCode  {
 // An error if parsing fails.
 func (u *UARTRVC) ParseFrame() tinygoerrors.ErrorCode {
 	// Retrieve and parse fields from the frame
-	// index := u.buffer[2
-	yaw, _ := tinygobuffers.BytesToUint16LE(u.buffer[3:5])
-	pitch, _ := tinygobuffers.BytesToUint16LE(u.buffer[5:7])
-	roll, _ := tinygobuffers.BytesToUint16LE(u.buffer[7:9])
-	xAccel, _ := tinygobuffers.BytesToUint16LE(u.buffer[9:11])
-	yAccel, _ := tinygobuffers.BytesToUint16LE(u.buffer[11:13])
-	zAccel, _ := tinygobuffers.BytesToUint16LE(u.buffer[13:15])
+	// index := u.buffer[2]
+	yawUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[3:5])
+	pitchUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[5:7])
+	rollUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[7:9])
+	xAccelUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[9:11])
+	yAccelUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[11:13])
+	zAccelUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[13:15])
 	// res1 := u.buffer[15]
 	// res2 := u.buffer[16]
 	// res3 := u.buffer[17]
@@ -141,7 +141,7 @@ func (u *UARTRVC) ParseFrame() tinygoerrors.ErrorCode {
 	checksumCalc := byte(0)
 	for i := UARTRVCHeaderLength; i < UARTRVCPacketLengthBytes-1; i++ {
 		checksumCalc += u.buffer[i]
-	}
+}	
 	if checksumCalc != checksum {
 		if u.logger != nil {
 			u.logger.InfoMessage(invalidChecksumMessage)
@@ -149,15 +149,31 @@ func (u *UARTRVC) ParseFrame() tinygoerrors.ErrorCode {
 		return ErrorCodeBNO08XUARTRVCInvalidChecksum
 	}
 
+	// Calculate values for yaw, pitch and roll
+	yaw := float64(yawUint16) * 0.01
+	if yaw < EulerDegreesYawMinValue || yaw > EulerDegreesYawMaxValue {
+		return ErrorCodeBNO08XUARTRVCInvalidYawDegreesValue
+	}
+	
+	pitch := float64(pitchUint16) * 0.01
+	if pitch < EulerDegreesPitchMinValue || pitch > EulerDegreesPitchMaxValue {
+		return ErrorCodeBNO08XUARTRVCInvalidPitchDegreesValue
+	}
+
+	roll := float64(rollUint16) * 0.01
+	if roll < EulerDegreesRollMinValue || roll > EulerDegreesRollMaxValue {
+		return ErrorCodeBNO08XUARTRVCInvalidRollDegreesValue
+	}
+
 	// Update the current euler degrees
-	u.eulerDegrees[EulerDegreesYawIndex] = float64(yaw) * 0.01
-	u.eulerDegrees[EulerDegreesPitchIndex] = float64(pitch) * 0.01
-	u.eulerDegrees[EulerDegreesRollIndex] = float64(roll) * 0.01
+	u.eulerDegrees[EulerDegreesYawIndex] = yaw
+	u.eulerDegrees[EulerDegreesPitchIndex] = pitch
+	u.eulerDegrees[EulerDegreesRollIndex] = roll
 
 	// Update the current accelerometer values
-	u.accelerometer[ThreeDimensionalXIndex] = float64(xAccel) * MilligToMeterPerSecondSquared
-	u.accelerometer[ThreeDimensionalYIndex] = float64(yAccel) * MilligToMeterPerSecondSquared
-	u.accelerometer[ThreeDimensionalZIndex] = float64(zAccel) * MilligToMeterPerSecondSquared
+	u.accelerometer[ThreeDimensionalXIndex] = float64(xAccelUint16) * MilligToMeterPerSecondSquared
+	u.accelerometer[ThreeDimensionalYIndex] = float64(yAccelUint16) * MilligToMeterPerSecondSquared
+	u.accelerometer[ThreeDimensionalZIndex] = float64(zAccelUint16) * MilligToMeterPerSecondSquared
 	return tinygoerrors.ErrorCodeNil
 }
 

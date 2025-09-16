@@ -323,11 +323,29 @@ const (
 	// EulerDegreesRollIndex is the index for the roll component in an euler degrees vector
 	EulerDegreesRollIndex = 0
 
+	// EulerDegreesRollMinValue is the minimum value for the Euler degrees roll component
+	EulerDegreesRollMinValue = -180.0
+	
+	// EulerDegreesRollMaxValue is the maximum value for the Euler degrees roll component
+	EulerDegreesRollMaxValue = 180.0
+
 	// EulerDegreesPitchIndex is the index for the pitch component in an euler degrees vector
 	EulerDegreesPitchIndex = 1
 
+	// EulerDegreesPitchMinValue is the minimum value for the Euler degrees pitch component
+	EulerDegreesPitchMinValue = -90.0
+
+	// EulerDegreesPitchMaxValue is the maximum value for the Euler degrees pitch component
+	EulerDegreesPitchMaxValue = 90.0
+
 	// EulerDegreesYawIndex is the index for the yaw component in an euler degrees vector
 	EulerDegreesYawIndex = 2
+
+	// EulerDegreesYawMinValue is the minimum value for the Euler degrees yaw component
+	EulerDegreesYawMinValue = -180.0
+
+	// EulerDegreesYawMaxValue is the maximum value for the Euler degrees yaw component
+	EulerDegreesYawMaxValue = 180.0
 
 	// ThreeDimensionalXIndex is the index for the X component in a three-dimensional vector
 	ThreeDimensionalXIndex = 0
