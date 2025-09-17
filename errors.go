@@ -22,7 +22,6 @@ const (
 	ErrorCodeBNO08XUARTRVCInvalidChecksum
 	ErrorCodeBNO08XUARTRVCByteTimeout
 	ErrorCodeBNO08XUARTRVCFailedToReadByte
-	ErrorCodeBNO08XFailedToParseFrame
 	ErrorCodeBNO08XUARTRVCUARTTimeout
 	ErrorCodeBNO08XFailedToCreatePacket
 	ErrorCodeBNO08XFailedToSetUARTFormat

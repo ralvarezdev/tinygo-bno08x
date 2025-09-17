@@ -5,9 +5,9 @@ import (
 
 	"machine"
 
+	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
-	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 )
 
 type (
@@ -19,12 +19,12 @@ type (
 		ps0Pin        machine.Pin
 		ps1Pin        machine.Pin
 		resetPin      machine.Pin
-		logger      tinygologger.Logger
+		logger        tinygologger.Logger
 		timeout       time.Duration
 		accelerometer [3]float64
 		eulerDegrees  [3]float64
 		initComplete  bool
-		buffer 	  []byte
+		buffer        []byte
 	}
 )
 
@@ -89,16 +89,16 @@ func NewUARTRVC(
 
 	// Create the UART-RVC instance
 	uartRVC := &UARTRVC{
-		uartBus:       uartBus,
-		txPin:         txPin,
-		rxPin:         rxPin,
-		ps0Pin:        ps0Pin,
-		ps1Pin:        ps1Pin,
-		resetPin:      resetPin,
-		logger:      logger,
-		buffer:        make([]byte, UARTRVCPacketLengthBytes),
-		timeout:       UARTRVCTimeout,
-		initComplete:  false,
+		uartBus:      uartBus,
+		txPin:        txPin,
+		rxPin:        rxPin,
+		ps0Pin:       ps0Pin,
+		ps1Pin:       ps1Pin,
+		resetPin:     resetPin,
+		logger:       logger,
+		buffer:       make([]byte, UARTRVCPacketLengthBytes),
+		timeout:      UARTRVCTimeout,
+		initComplete: false,
 	}
 
 	// Perform reset
@@ -113,7 +113,7 @@ func NewUARTRVC(
 // Returns:
 //
 // An error if the reset process fails, otherwise nil.
-func (u *UARTRVC) Reset() tinygoerrors.ErrorCode  {
+func (u *UARTRVC) Reset() tinygoerrors.ErrorCode {
 	HardwareReset(u.resetPin, u.logger)
 	return tinygoerrors.ErrorCodeNil
 }
@@ -126,12 +126,12 @@ func (u *UARTRVC) Reset() tinygoerrors.ErrorCode  {
 func (u *UARTRVC) ParseFrame() tinygoerrors.ErrorCode {
 	// Retrieve and parse fields from the frame
 	// index := u.buffer[2]
-	yawUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[3:5])
-	pitchUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[5:7])
-	rollUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[7:9])
-	xAccelUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[9:11])
-	yAccelUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[11:13])
-	zAccelUint16, _ := tinygobuffers.BytesToUint16LE(u.buffer[13:15])
+	yawInt16, _ := tinygobuffers.BytesToInt16LE(u.buffer[3:5])
+	pitchInt16, _ := tinygobuffers.BytesToInt16LE(u.buffer[5:7])
+	rollInt16, _ := tinygobuffers.BytesToInt16LE(u.buffer[7:9])
+	xAccelInt16, _ := tinygobuffers.BytesToInt16LE(u.buffer[9:11])
+	yAccelInt16, _ := tinygobuffers.BytesToInt16LE(u.buffer[11:13])
+	zAccelInt16, _ := tinygobuffers.BytesToInt16LE(u.buffer[13:15])
 	// res1 := u.buffer[15]
 	// res2 := u.buffer[16]
 	// res3 := u.buffer[17]
@@ -141,7 +141,7 @@ func (u *UARTRVC) ParseFrame() tinygoerrors.ErrorCode {
 	checksumCalc := byte(0)
 	for i := UARTRVCHeaderLength; i < UARTRVCPacketLengthBytes-1; i++ {
 		checksumCalc += u.buffer[i]
-}	
+	}
 	if checksumCalc != checksum {
 		if u.logger != nil {
 			u.logger.InfoMessage(invalidChecksumMessage)
@@ -150,17 +150,17 @@ func (u *UARTRVC) ParseFrame() tinygoerrors.ErrorCode {
 	}
 
 	// Calculate values for yaw, pitch and roll
-	yaw := float64(yawUint16) * 0.01
+	yaw := float64(yawInt16) * 0.01
 	if yaw < EulerDegreesYawMinValue || yaw > EulerDegreesYawMaxValue {
 		return ErrorCodeBNO08XUARTRVCInvalidYawDegreesValue
 	}
-	
-	pitch := float64(pitchUint16) * 0.01
+
+	pitch := float64(pitchInt16) * 0.01
 	if pitch < EulerDegreesPitchMinValue || pitch > EulerDegreesPitchMaxValue {
 		return ErrorCodeBNO08XUARTRVCInvalidPitchDegreesValue
 	}
 
-	roll := float64(rollUint16) * 0.01
+	roll := float64(rollInt16) * 0.01
 	if roll < EulerDegreesRollMinValue || roll > EulerDegreesRollMaxValue {
 		return ErrorCodeBNO08XUARTRVCInvalidRollDegreesValue
 	}
@@ -171,20 +171,24 @@ func (u *UARTRVC) ParseFrame() tinygoerrors.ErrorCode {
 	u.eulerDegrees[EulerDegreesRollIndex] = roll
 
 	// Update the current accelerometer values
-	u.accelerometer[ThreeDimensionalXIndex] = float64(xAccelUint16) * MilligToMeterPerSecondSquared
-	u.accelerometer[ThreeDimensionalYIndex] = float64(yAccelUint16) * MilligToMeterPerSecondSquared
-	u.accelerometer[ThreeDimensionalZIndex] = float64(zAccelUint16) * MilligToMeterPerSecondSquared
+	u.accelerometer[ThreeDimensionalXIndex] = float64(xAccelInt16) * MilligToMeterPerSecondSquared
+	u.accelerometer[ThreeDimensionalYIndex] = float64(yAccelInt16) * MilligToMeterPerSecondSquared
+	u.accelerometer[ThreeDimensionalZIndex] = float64(zAccelInt16) * MilligToMeterPerSecondSquared
 	return tinygoerrors.ErrorCodeNil
 }
 
 // readByte blocks until a byte is read (simple poll).
 //
+// Parameters:
+//
+// timeout: The maximum duration to wait for a byte.
+//
 // Returns:
 //
 // A byte read from UART and an error if any.
-func (u *UARTRVC) readByte() (byte, tinygoerrors.ErrorCode) {
+func (u *UARTRVC) readByte(timeout time.Duration) (byte, tinygoerrors.ErrorCode) {
 	startTime := time.Now()
-	for time.Since(startTime) < UARTByteTimeout {
+	for time.Since(startTime) < timeout {
 		if u.uartBus.Buffered() > 0 {
 			if b, err := u.uartBus.ReadByte(); err == nil {
 				return b, tinygoerrors.ErrorCodeNil
@@ -208,14 +212,16 @@ func (u *UARTRVC) Read() tinygoerrors.ErrorCode {
 
 	// Get the start time for timeout calculation
 	start := time.Now()
+	processedBytes := 0
 	for time.Since(start) < u.timeout {
 		// Loop until timeout to find the start bytes
-		processedBytes := 0
-		for processedBytes < UARTRVCHeaderLength {
-			b, err := u.readByte()
+		for processedBytes < 2 && time.Since(start) < u.timeout {
+			b, err := u.readByte(u.timeout - time.Since(start))
 			if err != tinygoerrors.ErrorCodeNil {
 				return err
 			}
+
+			// Store the byte in the buffer
 			u.buffer[processedBytes] = b
 			processedBytes++
 		}
@@ -254,7 +260,7 @@ func (u *UARTRVC) Read() tinygoerrors.ErrorCode {
 			if u.logger != nil {
 				u.logger.WarningMessage(failedToParseFrameMessage)
 			}
-			return ErrorCodeBNO08XFailedToParseFrame
+			return err
 		}
 		return tinygoerrors.ErrorCodeNil
 	}
