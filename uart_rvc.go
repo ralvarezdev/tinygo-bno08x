@@ -215,7 +215,7 @@ func (u *UARTRVC) Read() tinygoerrors.ErrorCode {
 	processedBytes := 0
 	for time.Since(start) < u.timeout {
 		// Loop until timeout to find the start bytes
-		for processedBytes < 2 && time.Since(start) < u.timeout {
+		for processedBytes < 2 {
 			b, err := u.readByte(u.timeout - time.Since(start))
 			if err != tinygoerrors.ErrorCodeNil {
 				return err
@@ -225,6 +225,7 @@ func (u *UARTRVC) Read() tinygoerrors.ErrorCode {
 			u.buffer[processedBytes] = b
 			processedBytes++
 		}
+
 
 		// Check if we have the start bytes
 		if u.buffer[0] != UARTRVCStartByte || u.buffer[1] != UARTRVCStartByte {
@@ -242,7 +243,7 @@ func (u *UARTRVC) Read() tinygoerrors.ErrorCode {
 
 		// We have the start bytes, read the rest of the frame
 		for processedBytes < UARTRVCPacketLengthBytes {
-			b, err := u.readByte()
+			b, err := u.readByte(u.timeout - time.Since(start))
 			if err != tinygoerrors.ErrorCodeNil {
 				return err
 			}
@@ -258,7 +259,7 @@ func (u *UARTRVC) Read() tinygoerrors.ErrorCode {
 		// Parse the frame
 		if err := u.ParseFrame(); err != tinygoerrors.ErrorCodeNil {
 			if u.logger != nil {
-				u.logger.WarningMessage(failedToParseFrameMessage)
+				u.logger.WarningMessageWithErrorCode(failedToParseFrameMessage, err, true)
 			}
 			return err
 		}
