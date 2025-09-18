@@ -16,9 +16,6 @@ var (
 	// hardwareResetComplete is the message printed when a hardware reset is complete
 	hardwareResetComplete = []byte("Hardware reset complete")
 
-	// errorInAfterHardwareResetFn is the message printed when there is an error in the afterHardwareResetFn
-	errorInAfterHardwareResetFn = []byte("Error in afterHardwareResetFn:")
-
 	// softwareResetStart is the initial message printed when performing a software reset
 	softwareResetStart = []byte("Software resetting...")
 
@@ -72,7 +69,11 @@ func HardwareReset(resetPin machine.Pin, logger tinygologger.Logger) {
 //
 // An error if the packet writer or waitForPacket function is nil, if sending the reset command fails,
 // or if there are issues while waiting for packets during the reset process.
-func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologger.Logger, waitForPacketFn func(time.Duration) (Packet, tinygoerrors.ErrorCode)) tinygoerrors.ErrorCode {
+func SoftwareResetForI2CAndSPIMode(
+	packetWriter PacketWriter,
+	logger tinygologger.Logger,
+	waitForPacketFn func(time.Duration) (Packet, tinygoerrors.ErrorCode),
+) tinygoerrors.ErrorCode {
 	// Check if the packet writer is nil
 	if packetWriter == nil {
 		return ErrorCodeBNO08XNilPacketWriter
@@ -83,14 +84,16 @@ func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologge
 		return ErrorCodeBNO08XNilWaitForPacketFunction
 	}
 
-
 	// Log the start of the reset process
 	if logger != nil {
 		logger.InfoMessage(softwareResetStart)
 	}
 
 	// Send the reset command
-	if _, err := packetWriter.SendPacket(ChannelExe, ExecCommandResetData); err != tinygoerrors.ErrorCodeNil {
+	if _, err := packetWriter.SendPacket(
+		ChannelExe,
+		ExecCommandResetData,
+	); err != tinygoerrors.ErrorCodeNil {
 		return ErrorCodeBNO08XFailedToSendResetCommandRequestPacket
 	}
 
@@ -114,7 +117,13 @@ func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologge
 			if packet.ChannelNumber() == ChannelSHTPCommand && len(packet.Data) == AdvertisementPacketLength {
 				logger.InfoMessage(foundSHTPAdvertisementPacket)
 			} else {
-				logger.AddMessageWithUint8(clearingPacketFromChannel, packet.ChannelNumber(), true, true, true)
+				logger.AddMessageWithUint8(
+					clearingPacketFromChannel,
+					packet.ChannelNumber(),
+					true,
+					true,
+					true,
+				)
 				logger.Info()
 			}
 		}
@@ -138,7 +147,11 @@ func SoftwareResetForI2CAndSPIMode(packetWriter PacketWriter, logger tinygologge
 //
 // An error if the packet writer or waitForPacket function is nil, if sending the reset command fails,
 // or if there are issues while waiting for packets during the reset process.
-func SoftwareResetForUARTMode(packetWriter PacketWriter, logger tinygologger.Logger, waitForPacketFn func(time.Duration) (Packet, tinygoerrors.ErrorCode)) tinygoerrors.ErrorCode {
+func SoftwareResetForUARTMode(
+	packetWriter PacketWriter,
+	logger tinygologger.Logger,
+	waitForPacketFn func(time.Duration) (Packet, tinygoerrors.ErrorCode),
+) tinygoerrors.ErrorCode {
 	// Check if the packet writer is nil
 	if packetWriter == nil {
 		return ErrorCodeBNO08XNilPacketWriter
@@ -171,14 +184,23 @@ func SoftwareResetForUARTMode(packetWriter PacketWriter, logger tinygologger.Log
 			if packet.ChannelNumber() == ChannelSHTPCommand && len(packet.Data) == AdvertisementPacketLength {
 				logger.InfoMessage(foundSHTPAdvertisementPacket)
 			} else {
-				logger.AddMessageWithUint8(clearingPacketFromChannel, packet.ChannelNumber(), true, true, true)
+				logger.AddMessageWithUint8(
+					clearingPacketFromChannel,
+					packet.ChannelNumber(),
+					true,
+					true,
+					true,
+				)
 				logger.Info()
 			}
 		}
 	}
 
 	// Send the reset command
-	if _, err := packetWriter.SendPacket(ChannelExe, ExecCommandResetData); err != tinygoerrors.ErrorCodeNil {
+	if _, err := packetWriter.SendPacket(
+		ChannelExe,
+		ExecCommandResetData,
+	); err != tinygoerrors.ErrorCodeNil {
 		return ErrorCodeBNO08XFailedToSendResetCommandRequestPacket
 	}
 

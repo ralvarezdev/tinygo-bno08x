@@ -7,8 +7,8 @@ import (
 type (
 	// DefaultPacketBuffer is a default implementation of the PacketBuffer interface
 	DefaultPacketBuffer struct {
-		buffer                    []byte
-		sequenceNumber          []uint8
+		buffer                 []byte
+		sequenceNumber         []uint8
 		reportsSequenceNumbers [256]uint8
 	}
 )
@@ -16,8 +16,8 @@ type (
 // NewDefaultPacketBuffer creates a new DefaultPacketBuffer instance
 func NewDefaultPacketBuffer() *DefaultPacketBuffer {
 	return &DefaultPacketBuffer{
-		buffer:                    make([]byte, PacketBufferSize),
-		sequenceNumber:          make([]uint8, MaxChannelNumber),
+		buffer:                 make([]byte, PacketBufferSize),
+		sequenceNumber:         make([]uint8, MaxChannelNumber),
 		reportsSequenceNumbers: [256]uint8{},
 	}
 }
@@ -41,7 +41,10 @@ func (pb *DefaultPacketBuffer) GetBuffer() []byte {
 // Returns:
 //
 // An error if the index is out of range, otherwise nil.
-func (pb *DefaultPacketBuffer) SetBufferValue(index int, value byte) tinygoerrors.ErrorCode {
+func (pb *DefaultPacketBuffer) SetBufferValue(
+	index int,
+	value byte,
+) tinygoerrors.ErrorCode {
 	if index < 0 || index >= len(pb.buffer) {
 		return ErrorCodeBNO08XPacketBufferIndexOutOfRange
 	}
@@ -123,7 +126,10 @@ func (pb *DefaultPacketBuffer) IncrementChannelSequenceNumber(channel uint8) (
 // Returns:
 //
 //	The cached sequence number for the channel, or -1 if the channel is invalid.
-func (pb *DefaultPacketBuffer) GetChannelSequenceNumber(channel uint8) (uint8, tinygoerrors.ErrorCode) {
+func (pb *DefaultPacketBuffer) GetChannelSequenceNumber(channel uint8) (
+	uint8,
+	tinygoerrors.ErrorCode,
+) {
 	// Validate the channel number
 	if err := pb.validateChannelNumber(channel); err != tinygoerrors.ErrorCodeNil {
 		return 0, err

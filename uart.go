@@ -21,18 +21,18 @@ type (
 
 	// UARTPacketReader is the packet reader for UART interface
 	UARTPacketReader struct {
-		uartBus    *machine.UART
+		uartBus      *machine.UART
 		packetBuffer PacketBuffer
-		logger   tinygologger.Logger
-		ultraDebug bool
+		logger       tinygologger.Logger
+		ultraDebug   bool
 	}
 
 	// UARTPacketWriter is the packet writer for UART interface
 	UARTPacketWriter struct {
-		uartBus    *machine.UART
+		uartBus      *machine.UART
 		packetBuffer PacketBuffer
-		logger   tinygologger.Logger
-		ultraDebug bool
+		logger       tinygologger.Logger
+		ultraDebug   bool
 	}
 )
 
@@ -91,7 +91,11 @@ func NewUART(
 	}
 
 	// Set UART format (8N1)
-	if err := uartBus.SetFormat(UARTDataBits, UARTStopBits, UARTParity); err != nil {
+	if err := uartBus.SetFormat(
+		UARTDataBits,
+		UARTStopBits,
+		UARTParity,
+	); err != nil {
 		return nil, ErrorCodeBNO08XFailedToSetUARTFormat
 	}
 
@@ -177,10 +181,10 @@ func newUARTPacketReader(
 	}
 
 	return &UARTPacketReader{
-		uartBus:    uartBus,
-		logger:   logger,
+		uartBus:      uartBus,
+		logger:       logger,
 		packetBuffer: packetBuffer,
-		ultraDebug: ultraDebug,
+		ultraDebug:   ultraDebug,
 	}, tinygoerrors.ErrorCodeNil
 }
 
@@ -215,7 +219,13 @@ func (pr *UARTPacketReader) readByte() (byte, tinygoerrors.ErrorCode) {
 				return b, ErrorCodeBNO08XUARTFailedToReadByte
 			}
 			if pr.logger != nil && pr.ultraDebug {
-				pr.logger.AddMessageWithUint8(receivedBytePrefix, b, true, true, true)
+				pr.logger.AddMessageWithUint8(
+					receivedBytePrefix,
+					b,
+					true,
+					true,
+					true,
+				)
 				pr.logger.Debug()
 			}
 			return b, tinygoerrors.ErrorCodeNil
@@ -235,7 +245,11 @@ func (pr *UARTPacketReader) readByte() (byte, tinygoerrors.ErrorCode) {
 // Returns:
 //
 // An error if any occurs during reading.
-func (pr *UARTPacketReader) readInto(buffer []byte, start int, end int) tinygoerrors.ErrorCode {
+func (pr *UARTPacketReader) readInto(
+	buffer []byte,
+	start int,
+	end int,
+) tinygoerrors.ErrorCode {
 	// Check if the buffer slice is nil
 	if buffer == nil {
 		return ErrorCodeBNO08XNilDestinationBuffer
@@ -353,7 +367,10 @@ func (pr *UARTPacketReader) ReadPacket() (Packet, tinygoerrors.ErrorCode) {
 	}
 
 	// Initialize packet
-	packet, err := NewPacket(packetBuffer[PacketHeaderLength:header.PacketByteCount], header)
+	packet, err := NewPacket(
+		packetBuffer[PacketHeaderLength:header.PacketByteCount],
+		header,
+	)
 	if err != tinygoerrors.ErrorCodeNil {
 		return Packet{}, err
 	}
@@ -392,10 +409,10 @@ func newUARTPacketWriter(
 	}
 
 	return &UARTPacketWriter{
-		uartBus:    uartBus,
-		logger:   logger,
+		uartBus:      uartBus,
+		logger:       logger,
 		packetBuffer: packetBuffer,
-		ultraDebug: ultraDebug,
+		ultraDebug:   ultraDebug,
 	}, tinygoerrors.ErrorCodeNil
 }
 

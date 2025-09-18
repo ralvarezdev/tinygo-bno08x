@@ -173,9 +173,17 @@ func (b *BNO08X) hardwareReset() {
 // An error if the reset process fails, otherwise nil.
 func (b *BNO08X) softwareReset() tinygoerrors.ErrorCode {
 	if b.mode == I2CMode || b.mode == SPIMode {
-		return SoftwareResetForI2CAndSPIMode(b.packetWriter, b.logger, b.waitForPacket)
+		return SoftwareResetForI2CAndSPIMode(
+			b.packetWriter,
+			b.logger,
+			b.waitForPacket,
+		)
 	} else if b.mode == UARTMode || b.mode == UARTRVCMode {
-		return SoftwareResetForUARTMode(b.packetWriter, b.logger, b.waitForPacket)
+		return SoftwareResetForUARTMode(
+			b.packetWriter,
+			b.logger,
+			b.waitForPacket,
+		)
 	}
 	return ErrorCodeBNO08XUnknownModeAttemptingSoftwareReset
 }
@@ -208,7 +216,11 @@ func (b *BNO08X) Reset() tinygoerrors.ErrorCode {
 
 		// Check if the sensor ID can be read
 		if err := b.checkID(); err != tinygoerrors.ErrorCodeNil {
-			b.logger.WarningMessageWithErrorCode(errorOccurredWhileWaitingForSensorID, err, true)
+			b.logger.WarningMessageWithErrorCode(
+				errorOccurredWhileWaitingForSensorID,
+				err,
+				true,
+			)
 
 			// Wait a bit before trying again
 			time.Sleep(CheckIDDelay)
@@ -289,9 +301,21 @@ func (b *BNO08X) waitForPacketType(
 	// Log message
 	if b.logger != nil {
 		if reportID == nil {
-			b.logger.AddMessageWithUint8(waitingForPacketOnChannel, channelNumber, true, true, true)
+			b.logger.AddMessageWithUint8(
+				waitingForPacketOnChannel,
+				channelNumber,
+				true,
+				true,
+				true,
+			)
 		} else {
-			b.logger.AddMessageWithUint8(waitingForPacketWithReportIDOnChannel, *reportID, true, true, true)
+			b.logger.AddMessageWithUint8(
+				waitingForPacketWithReportIDOnChannel,
+				*reportID,
+				true,
+				true,
+				true,
+			)
 		}
 		b.logger.Info()
 	}
@@ -341,7 +365,10 @@ func (b *BNO08X) waitForPacketType(
 // Returns:
 //
 //	A Packet if available, or an error if the timeout is reached or an error occurs.
-func (b *BNO08X) waitForPacket(timeout time.Duration) (Packet, tinygoerrors.ErrorCode) {
+func (b *BNO08X) waitForPacket(timeout time.Duration) (
+	Packet,
+	tinygoerrors.ErrorCode,
+) {
 	startTime := time.Now()
 	for time.Since(startTime) < timeout {
 		// Check if data is ready to be read
@@ -354,7 +381,11 @@ func (b *BNO08X) waitForPacket(timeout time.Duration) (Packet, tinygoerrors.Erro
 		newPacket, err := b.packetReader.ReadPacket()
 		if err != tinygoerrors.ErrorCodeNil {
 			if b.logger != nil {
-				b.logger.WarningMessageWithErrorCode(errorOccurredWhileWaitingForPacket, err, true)
+				b.logger.WarningMessageWithErrorCode(
+					errorOccurredWhileWaitingForPacket,
+					err,
+					true,
+				)
 			}
 			continue
 		}
@@ -385,7 +416,13 @@ func (b *BNO08X) handlePacket(packet Packet) tinygoerrors.ErrorCode {
 		reportID := packet.Data[idx]
 
 		if b.logger != nil {
-			b.logger.AddMessageWithUint8(processingReportID, reportID, true, true, true)
+			b.logger.AddMessageWithUint8(
+				processingReportID,
+				reportID,
+				true,
+				true,
+				true,
+			)
 			b.logger.Info()
 		}
 
@@ -410,7 +447,13 @@ func (b *BNO08X) handlePacket(packet Packet) tinygoerrors.ErrorCode {
 		// Process the report
 		if err := b.processReport(report); err != tinygoerrors.ErrorCodeNil {
 			if b.logger != nil {
-				b.logger.AddMessageWithUint8(failedToProcessReportID, report.ID, true, true, true)
+				b.logger.AddMessageWithUint8(
+					failedToProcessReportID,
+					report.ID,
+					true,
+					true,
+					true,
+				)
 				b.logger.Warning()
 			}
 			return err
@@ -443,7 +486,13 @@ func (b *BNO08X) processReport(report report) tinygoerrors.ErrorCode {
 	}
 
 	if b.logger != nil {
-		b.logger.AddMessageWithUint8(processingReport, report.ID, true, true, true)
+		b.logger.AddMessageWithUint8(
+			processingReport,
+			report.ID,
+			true,
+			true,
+			true,
+		)
 		b.logger.Info()
 	}
 
@@ -659,7 +708,11 @@ func (b *BNO08X) processAvailablePackets() {
 		newPacket, err := b.packetReader.ReadPacket()
 		if err != tinygoerrors.ErrorCodeNil {
 			if b.logger != nil {
-				b.logger.WarningMessageWithErrorCode(errorReadingPacket, err, true)
+				b.logger.WarningMessageWithErrorCode(
+					errorReadingPacket,
+					err,
+					true,
+				)
 			}
 			continue
 		}
@@ -667,7 +720,11 @@ func (b *BNO08X) processAvailablePackets() {
 		// Pass the packet to the handler
 		if err = b.handlePacket(newPacket); err != tinygoerrors.ErrorCodeNil {
 			if b.logger != nil {
-				b.logger.WarningMessageWithErrorCode(errorHandlingPacket, err, true)
+				b.logger.WarningMessageWithErrorCode(
+					errorHandlingPacket,
+					err,
+					true,
+				)
 			}
 			continue
 		}
@@ -832,7 +889,13 @@ func (b *BNO08X) GetRawMagnetic() [3]float64 {
 func (b *BNO08X) EnableFeature(featureID uint8) tinygoerrors.ErrorCode {
 	for i := 0; i < EnableFeatureAttempts; i++ {
 		if b.logger != nil {
-			b.logger.AddMessageWithUint8(enablingFeatureID, featureID, true, true, true)
+			b.logger.AddMessageWithUint8(
+				enablingFeatureID,
+				featureID,
+				true,
+				true,
+				true,
+			)
 			b.logger.Info()
 		}
 
@@ -999,7 +1062,10 @@ func (b *BNO08X) sendMeCommand(subcommandParams []byte) tinygoerrors.ErrorCode {
 	}
 
 	// Send the command request Packet
-	if _, err := b.packetWriter.SendPacket(ChannelControl, packetDataBuffer); err != tinygoerrors.ErrorCodeNil {
+	if _, err := b.packetWriter.SendPacket(
+		ChannelControl,
+		packetDataBuffer,
+	); err != tinygoerrors.ErrorCodeNil {
 		return ErrorCodeBNO08XFailedToSendMeCommandRequestPacket
 	}
 	b.packetBuffer.IncrementReportSequenceNumber(ReportIDCommandRequest)

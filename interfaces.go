@@ -11,7 +11,10 @@ type (
 		SetBufferValue(index int, value byte) tinygoerrors.ErrorCode
 		SetBuffer(data []byte) tinygoerrors.ErrorCode
 		ClearBuffer()
-		IncrementChannelSequenceNumber(channel uint8) (uint8, tinygoerrors.ErrorCode)
+		IncrementChannelSequenceNumber(channel uint8) (
+			uint8,
+			tinygoerrors.ErrorCode,
+		)
 		GetChannelSequenceNumber(channel uint8) (uint8, tinygoerrors.ErrorCode)
 		IncrementReportSequenceNumber(reportID uint8)
 		GetReportSequenceNumber(reportID uint8) uint8

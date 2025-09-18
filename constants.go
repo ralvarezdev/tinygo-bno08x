@@ -325,7 +325,7 @@ const (
 
 	// EulerDegreesRollMinValue is the minimum value for the Euler degrees roll component
 	EulerDegreesRollMinValue = -180.0
-	
+
 	// EulerDegreesRollMaxValue is the maximum value for the Euler degrees roll component
 	EulerDegreesRollMaxValue = 180.0
 

@@ -23,20 +23,20 @@ type (
 
 	// SPIPacketReader is the packet reader for SPI interface
 	SPIPacketReader struct {
-		spiBus     *machine.SPI
-		intPin    machine.Pin
-		packetBuffer PacketBuffer
-		logger   tinygologger.Logger
+		spiBus         *machine.SPI
+		intPin         machine.Pin
+		packetBuffer   PacketBuffer
+		logger         tinygologger.Logger
 		isHeaderCached bool
-		cachedHeader PacketHeader
+		cachedHeader   PacketHeader
 	}
 
 	// SPIPacketWriter is the packet writer for SPI interface
 	SPIPacketWriter struct {
-		spiBus     *machine.SPI
-		intPin    machine.Pin
+		spiBus       *machine.SPI
+		intPin       machine.Pin
 		packetBuffer PacketBuffer
-		logger   tinygologger.Logger
+		logger       tinygologger.Logger
 	}
 )
 
@@ -176,7 +176,10 @@ func (spi *SPI) GetBNO08X() *BNO08X {
 // Returns:
 //
 // An error if the wait times out.
-func waitForInt(intPin machine.Pin, logger tinygologger.Logger) tinygoerrors.ErrorCode {
+func waitForInt(
+	intPin machine.Pin,
+	logger tinygologger.Logger,
+) tinygoerrors.ErrorCode {
 	if logger != nil {
 		logger.InfoMessage(waitingForINTMessage)
 	}
@@ -219,9 +222,9 @@ func newSPIPacketReader(
 	}
 
 	return &SPIPacketReader{
-		spiBus:     spiBus,
-		intPin:    intPin,
-		logger:   logger,
+		spiBus:       spiBus,
+		intPin:       intPin,
+		logger:       logger,
 		packetBuffer: packetBuffer,
 	}, tinygoerrors.ErrorCodeNil
 }
@@ -375,9 +378,9 @@ func newSPIPacketWriter(
 	}
 
 	return &SPIPacketWriter{
-		spiBus:     spiBus,
-		intPin:    intPin,
-		logger:   logger,
+		spiBus:       spiBus,
+		intPin:       intPin,
+		logger:       logger,
 		packetBuffer: packetBuffer,
 	}, tinygoerrors.ErrorCodeNil
 }
@@ -401,7 +404,10 @@ func (pw *SPIPacketWriter) waitForInt() tinygoerrors.ErrorCode {
 // Returns:
 //
 // The sequence number used and an error if any occurs.
-func (pw *SPIPacketWriter) SendPacket(channel uint8, data []byte) (uint8, tinygoerrors.ErrorCode) {
+func (pw *SPIPacketWriter) SendPacket(channel uint8, data []byte) (
+	uint8,
+	tinygoerrors.ErrorCode,
+) {
 	// Check if the data is nil
 	if data == nil {
 		return 0, ErrorCodeBNO08XNilPacketData

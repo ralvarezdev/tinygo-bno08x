@@ -186,7 +186,10 @@ func (u *UARTRVC) ParseFrame() tinygoerrors.ErrorCode {
 // Returns:
 //
 // A byte read from UART and an error if any.
-func (u *UARTRVC) readByte(timeout time.Duration) (byte, tinygoerrors.ErrorCode) {
+func (u *UARTRVC) readByte(timeout time.Duration) (
+	byte,
+	tinygoerrors.ErrorCode,
+) {
 	startTime := time.Now()
 	for time.Since(startTime) < timeout {
 		if u.uartBus.Buffered() > 0 {
@@ -226,7 +229,6 @@ func (u *UARTRVC) Read() tinygoerrors.ErrorCode {
 			processedBytes++
 		}
 
-
 		// Check if we have the start bytes
 		if u.buffer[0] != UARTRVCStartByte || u.buffer[1] != UARTRVCStartByte {
 			// Check if we have the first start byte
@@ -259,7 +261,11 @@ func (u *UARTRVC) Read() tinygoerrors.ErrorCode {
 		// Parse the frame
 		if err := u.ParseFrame(); err != tinygoerrors.ErrorCodeNil {
 			if u.logger != nil {
-				u.logger.WarningMessageWithErrorCode(failedToParseFrameMessage, err, true)
+				u.logger.WarningMessageWithErrorCode(
+					failedToParseFrameMessage,
+					err,
+					true,
+				)
 			}
 			return err
 		}

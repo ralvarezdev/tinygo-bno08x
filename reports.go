@@ -1,9 +1,9 @@
 package tinygo_bno08x
 
 import (
+	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
-	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 )
 
 type (
@@ -131,7 +131,6 @@ func newSensorReport(scalar float64, count, ReportLength int) sensorReport {
 	}
 }
 
-
 // newReport creates a new report from the Packet data.
 //
 // Parameters:
@@ -190,6 +189,7 @@ func newReportFromPacket(packet Packet) (report, tinygoerrors.ErrorCode) {
 //	featureID: The ID of the feature to enable.
 //	reportInterval: The interval for reporting (default: DefaultReportInterval).
 //	sensorSpecificConfig: Sensor-specific configuration bits.
+//
 // buffer: A byte slice to hold the report data.
 //
 // Returns:
@@ -294,9 +294,12 @@ func newShakeReport(report report) (shakeReport, tinygoerrors.ErrorCode) {
 //	report: A report containing the report bytes
 //
 // Returns:
-// 
+//
 // A stepCounterReport or an error if the report bytes are too short
-func newStepCounterReport(report report) (stepCounterReport, tinygoerrors.ErrorCode) {
+func newStepCounterReport(report report) (
+	stepCounterReport,
+	tinygoerrors.ErrorCode,
+) {
 	// Check if the report ID is valid for a step counter report
 	if report.ID != ReportIDStepCounter {
 		return stepCounterReport{}, ErrorCodeBNO08XInvalidReportIDToParseReport
@@ -399,15 +402,45 @@ func (s *sensorID) Log(logger tinygologger.Logger) {
 	logger.AddMessage(sensorIDReportMessage, true)
 
 	// Log the software part number
-	logger.AddMessageWithUint32(sensorIDReportPartNumberPrefix, s.SoftwarePartNumber, true, true, false)
+	logger.AddMessageWithUint32(
+		sensorIDReportPartNumberPrefix,
+		s.SoftwarePartNumber,
+		true,
+		true,
+		false,
+	)
 
 	// Log the software version
-	logger.AddMessageWithUint8(sensorIDReportVersionPrefix, s.SoftwareMajorVersion, true, false, false)
-	logger.AddMessageWithUint8(sensorIDSoftwareVersionSeparator, s.SoftwareMinorVersion, false, false, false)
-	logger.AddMessageWithUint16(sensorIDSoftwareVersionSeparator, s.SoftwarePatchVersion, false, true, false)
+	logger.AddMessageWithUint8(
+		sensorIDReportVersionPrefix,
+		s.SoftwareMajorVersion,
+		true,
+		false,
+		false,
+	)
+	logger.AddMessageWithUint8(
+		sensorIDSoftwareVersionSeparator,
+		s.SoftwareMinorVersion,
+		false,
+		false,
+		false,
+	)
+	logger.AddMessageWithUint16(
+		sensorIDSoftwareVersionSeparator,
+		s.SoftwarePatchVersion,
+		false,
+		true,
+		false,
+	)
 
 	// Log the software build number
-	logger.AddMessageWithUint32(sensorIDReportBuildPrefix, s.SoftwareBuildNumber, true, true, false)
+	logger.AddMessageWithUint32(
+		sensorIDReportBuildPrefix,
+		s.SoftwareBuildNumber,
+		true,
+		true,
+		false,
+	)
 
 	// Finalize the log
 	logger.Info()
@@ -422,7 +455,10 @@ func (s *sensorID) Log(logger tinygologger.Logger) {
 // Returns:
 //
 //	A commandResponse or an error if the report bytes are too short
-func newCommandResponse(report report) (commandResponse, tinygoerrors.ErrorCode) {
+func newCommandResponse(report report) (
+	commandResponse,
+	tinygoerrors.ErrorCode,
+) {
 	// Check if the report ID is valid for a command response
 	if report.ID != ReportIDCommandResponse {
 		return commandResponse{}, ErrorCodeBNO08XInvalidReportIDToParseReport
@@ -512,7 +548,10 @@ func newActivityClassifierReport(report report) (
 // Returns:
 //
 // A sensorReportData or an error if the report bytes are too short
-func newSensorReportData(report report) (sensorReportData, tinygoerrors.ErrorCode) {
+func newSensorReportData(report report) (
+	sensorReportData,
+	tinygoerrors.ErrorCode,
+) {
 	// The data offset is assumed to be 4 bytes for sensor reports
 	dataOffset := 4 // may not always be true
 
@@ -644,7 +683,10 @@ func newFourDimensionalReport(
 // Returns:
 //
 //	The sensorReport corresponding to the report ID, or an error if the report ID is unknown
-func SensorReportFromReportID(reportID uint8) (sensorReport, tinygoerrors.ErrorCode) {
+func SensorReportFromReportID(reportID uint8) (
+	sensorReport,
+	tinygoerrors.ErrorCode,
+) {
 	switch reportID {
 	case ReportIDAccelerometer:
 		return SensorReportAccelerometer, tinygoerrors.ErrorCodeNil

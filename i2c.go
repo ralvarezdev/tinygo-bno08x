@@ -22,20 +22,20 @@ type (
 
 	// I2CPacketReader represents the Packet reader for the I2C interface.
 	I2CPacketReader struct {
-		i2cBus       *machine.I2C
+		i2cBus         *machine.I2C
 		packetBuffer   PacketBuffer
-		logger     tinygologger.Logger
-		address      uint16 // I2C address of the device
-		cachedHeader PacketHeader
+		logger         tinygologger.Logger
+		address        uint16 // I2C address of the device
+		cachedHeader   PacketHeader
 		isHeaderCached bool
 	}
 
 	// I2CPacketWriter represents the Packet writer for the I2C interface.
 	I2CPacketWriter struct {
-		i2cBus     *machine.I2C
+		i2cBus       *machine.I2C
 		packetBuffer PacketBuffer
-		logger   tinygologger.Logger
-		address    uint16 // I2C address of the device
+		logger       tinygologger.Logger
+		address      uint16 // I2C address of the device
 	}
 )
 
@@ -139,7 +139,10 @@ func NewI2C(
 	// Probe with retries
 	isGood := false
 	for i := 0; i < I2CProbeDeviceAttempts; i++ {
-		if err := probeDevice(i2cBus, address); err != tinygoerrors.ErrorCodeNil {
+		if err := probeDevice(
+			i2cBus,
+			address,
+		); err != tinygoerrors.ErrorCodeNil {
 			time.Sleep(I2CProbeDeviceDelay)
 			continue
 		}
@@ -233,10 +236,10 @@ func newI2CPacketWriter(
 	}
 
 	return &I2CPacketWriter{
-		i2cBus:     i2cBus,
+		i2cBus:       i2cBus,
 		packetBuffer: packetBuffer,
-		logger:   logger,
-		address:    address,
+		logger:       logger,
+		address:      address,
 	}, tinygoerrors.ErrorCodeNil
 }
 
@@ -324,10 +327,10 @@ func newI2CPacketReader(
 	}
 
 	return &I2CPacketReader{
-		i2cBus:     i2cBus,
-		logger:   logger,
+		i2cBus:       i2cBus,
+		logger:       logger,
 		packetBuffer: packetBuffer,
-		address:    address,
+		address:      address,
 	}, tinygoerrors.ErrorCodeNil
 }
 
@@ -374,7 +377,7 @@ func (pr *I2CPacketReader) readHeader() (PacketHeader, tinygoerrors.ErrorCode) {
 // A PacketHeader or an error if reading the header fails.
 func (pr *I2CPacketReader) nextHeader() (PacketHeader, tinygoerrors.ErrorCode) {
 	// Return cached header if available
-	if  pr.isHeaderCached {
+	if pr.isHeaderCached {
 		pr.isHeaderCached = false
 		return pr.cachedHeader, tinygoerrors.ErrorCodeNil
 	}
@@ -424,7 +427,7 @@ func (pr *I2CPacketReader) ReadPacket() (Packet, tinygoerrors.ErrorCode) {
 	}
 
 	// Preserve first 4 header bytes already read; read payload into slice after header.
-	dataBuffer := packetBuffer[PacketHeaderLength:PacketHeaderLength+dataLength]
+	dataBuffer := packetBuffer[PacketHeaderLength : PacketHeaderLength+dataLength]
 	if dataLength > 0 {
 		if err := pr.i2cBus.Tx(
 			pr.address,

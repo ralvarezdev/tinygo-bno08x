@@ -1,9 +1,9 @@
 package tinygo_bno08x
 
 import (
+	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 	tinygoerrors "github.com/ralvarezdev/tinygo-errors"
 	tinygologger "github.com/ralvarezdev/tinygo-logger"
-	tinygobuffers "github.com/ralvarezdev/tinygo-buffers"
 )
 
 type (
@@ -232,7 +232,7 @@ var (
 	featureIDPrefix = []byte("\t Feature ID: ")
 )
 
-// channelNumberNameBuffer returns the name of the channel as a byte slice.
+// ChannelNumberNameBuffer returns the name of the channel as a byte slice.
 //
 // Parameters:
 //
@@ -486,7 +486,10 @@ func NewPacketHeader(
 // Returns:
 //
 //	A PacketHeader object or an error if the buffer is too short.
-func NewPacketHeaderFromBuffer(buffer []byte) (PacketHeader, tinygoerrors.ErrorCode) {
+func NewPacketHeaderFromBuffer(buffer []byte) (
+	PacketHeader,
+	tinygoerrors.ErrorCode,
+) {
 	// Ensure the buffer is at least PacketHeaderLength bytes long to read the header
 	if len(buffer) < PacketHeaderLength {
 		return PacketHeader{}, ErrorCodeBNO08XPacketHeaderBufferTooShort
@@ -556,13 +559,13 @@ func NewPacketHeaderFromData(
 // Returns:
 //
 //	True if the header indicates an error, otherwise false.
-func (h *PacketHeader) IsError() bool {
+func (ph *PacketHeader) IsError() bool {
 	// Check if the channel number is greater than 5
-	if h.ChannelNumber > 5 {
+	if ph.ChannelNumber > 5 {
 		return true
 	}
 	// Check if the Packet byte count and sequence number indicate an error
-	if h.PacketByteCount == 0xFFFF && h.SequenceNumber == 0xFF {
+	if ph.PacketByteCount == 0xFFFF && ph.SequenceNumber == 0xFF {
 		return true
 	}
 	return false
@@ -588,16 +591,34 @@ func (ph *PacketHeader) Log(isBeingSent bool, logger tinygologger.Logger) {
 	}
 
 	// Log the data length
-	logger.AddMessageWithUint64(dataLengthPrefix, uint64(ph.DataLength), true, true, false)
+	logger.AddMessageWithUint64(
+		dataLengthPrefix,
+		uint64(ph.DataLength),
+		true,
+		true,
+		false,
+	)
 
 	// Log the channel
 	logger.AddMessage(channelPrefix, false)
 	logger.AddMessage(ChannelNumberNameBuffer(ph.ChannelNumber), false)
-	logger.AddMessageWithUint8(channelNumberPrefix, ph.ChannelNumber, true, false, true)
+	logger.AddMessageWithUint8(
+		channelNumberPrefix,
+		ph.ChannelNumber,
+		true,
+		false,
+		true,
+	)
 	logger.AddMessage(channelNumberSuffix, true)
 
 	// Log the sequence number
-	logger.AddMessageWithUint8(sequenceNumberPrefix, ph.SequenceNumber, true, true, false)
+	logger.AddMessageWithUint8(
+		sequenceNumberPrefix,
+		ph.SequenceNumber,
+		true,
+		true,
+		false,
+	)
 	logger.Debug()
 }
 
@@ -611,7 +632,10 @@ func (ph *PacketHeader) Log(isBeingSent bool, logger tinygologger.Logger) {
 // Returns:
 //
 // A Packet object or an error if the data or header is nil.
-func NewPacket(data []byte, header PacketHeader) (Packet, tinygoerrors.ErrorCode) {
+func NewPacket(data []byte, header PacketHeader) (
+	Packet,
+	tinygoerrors.ErrorCode,
+) {
 	// Check if data is nil
 	if data == nil {
 		return Packet{}, ErrorCodeBNO08XNilReportData
@@ -727,7 +751,11 @@ func (p *Packet) IsError() bool {
 // isBeingSent: A boolean indicating if the Packet is being sent (true) or received (false).
 // logHeader: A boolean indicating if the PacketHeader should be logged (true) or not (false).
 // logger: A Logger interface for logging messages.
-func (p *Packet) Log(isBeingSent bool, logHeader bool, logger tinygologger.Logger) {
+func (p *Packet) Log(
+	isBeingSent bool,
+	logHeader bool,
+	logger tinygologger.Logger,
+) {
 	// Check if logger is nil
 	if logger == nil {
 		return
@@ -800,7 +828,13 @@ func (p *Packet) Log(isBeingSent bool, logHeader bool, logger tinygologger.Logge
 		if !isUnknown {
 			logger.AddMessage(sensorReportPrefix, false)
 			logger.AddMessage(sensorReportNameBuffer, false)
-			logger.AddMessageWithUint8(reportIDPrefix, sensorReportID, true, false, true)
+			logger.AddMessageWithUint8(
+				reportIDPrefix,
+				sensorReportID,
+				true,
+				false,
+				true,
+			)
 			logger.AddMessage(reportIDSuffix, true)
 		}
 	}

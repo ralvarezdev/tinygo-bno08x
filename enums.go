@@ -72,7 +72,7 @@ const (
 
 const (
 	ModeNil Mode = iota
-	I2CMode 
+	I2CMode
 	UARTMode
 	UARTRVCMode
 	SPIMode
@@ -87,7 +87,10 @@ const (
 // Returns:
 //
 // The ReportAccuracyStatus enum value, or an error if the key wasn't found for the given value
-func ReportAccuracyStatusFromUint8(value uint8) (ReportAccuracyStatus, tinygoerrors.ErrorCode) {
+func ReportAccuracyStatusFromUint8(value uint8) (
+	ReportAccuracyStatus,
+	tinygoerrors.ErrorCode,
+) {
 	switch ReportAccuracyStatus(value) {
 	case ReportAccuracyStatusUnreliable:
 		return ReportAccuracyStatusUnreliable, tinygoerrors.ErrorCodeNil
@@ -111,7 +114,10 @@ func ReportAccuracyStatusFromUint8(value uint8) (ReportAccuracyStatus, tinygoerr
 // Returns:
 //
 // The ReportActivity enum value, or an error if the key wasn't found for the given value
-func ReportActivityFromUint8(value uint8) (ReportActivity, tinygoerrors.ErrorCode) {
+func ReportActivityFromUint8(value uint8) (
+	ReportActivity,
+	tinygoerrors.ErrorCode,
+) {
 	switch ReportActivity(value) {
 	case ReportActivityUnknown:
 		return ReportActivityUnknown, tinygoerrors.ErrorCodeNil
@@ -122,7 +128,7 @@ func ReportActivityFromUint8(value uint8) (ReportActivity, tinygoerrors.ErrorCod
 	case ReportActivityOnFoot:
 		return ReportActivityOnFoot, tinygoerrors.ErrorCodeNil
 	case ReportActivityStill:
-		return ReportActivityStill, tinygoerrors.ErrorCodeNil	
+		return ReportActivityStill, tinygoerrors.ErrorCodeNil
 	case ReportActivityTilting:
 		return ReportActivityTilting, tinygoerrors.ErrorCodeNil
 	case ReportActivityWalking:
@@ -145,7 +151,10 @@ func ReportActivityFromUint8(value uint8) (ReportActivity, tinygoerrors.ErrorCod
 // Returns:
 //
 // The ReportStabilityClassification enum value, or an error if the key wasn't found for the given value
-func ReportStabilityClassificationFromUint8(value uint8) (ReportStabilityClassification, tinygoerrors.ErrorCode) {
+func ReportStabilityClassificationFromUint8(value uint8) (
+	ReportStabilityClassification,
+	tinygoerrors.ErrorCode,
+) {
 	switch ReportStabilityClassification(value) {
 	case ReportStabilityClassificationUnknown:
 		return ReportStabilityClassificationUnknown, tinygoerrors.ErrorCodeNil
